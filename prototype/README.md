@@ -1,5 +1,9 @@
 # Lesson Studio — independent prototype
 
+Latest verified milestone: an agent filled the approved review package through Level Builder's browser editor, then saved it with explicit user permission. The user reviewed the resulting lesson as accurate. This demonstrates one browser-operated run; reusable automatic filling and API saving are not implemented. See [browser-fill acceptance results](BROWSER-FILL-ACCEPTANCE.md).
+
+Recent local fixes: untimed section minutes display blank, editing visibly clears the affected review checkbox, and unfinished review items have direct navigation links. Preview-first review and flag-to-edit controls remain planned.
+
 Two delivery versions now share the same lesson draft and review package:
 
 - **Manual / no Level Builder API:** this local app, with editable review and copy/export for manual entry.
