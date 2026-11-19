@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Lesson Studio API comparison</title><link rel="stylesheet" href="popup.css"></head><body>
+<h1>Compare with Level Builder</h1><p>API version · read-only connection preview</p>
+<p>Open Julian Playground – ChatGPT in this browser, then read its saved lesson. Unsaved editor changes are not included.</p>
+<button id="connect">Read assigned lesson</button>
+<label>Review package from Lesson Studio<input id="package" type="file" accept=".json,application/json"></label>
+<p id="status" role="status">No lesson loaded. No remote changes will be made.</p>
+<div id="result"></div><button id="download" disabled>Download comparison</button>
+<p>Close this popup to discard the loaded data. Download first to retain the comparison.</p>
+<script type="module" src="popup.mjs"></script></body></html>
