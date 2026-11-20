@@ -55,7 +55,8 @@ export async function runAcceptedNativeRehearsal(bridge,pkg,{onProgress=()=>{},o
   const first=await buildTransferPlan(pkg,snapshot),decisions={};
   for(const op of first.operations)if(op.path.length===1&&op.path[0]==='title')decisions[op.id]='keep';
   const plan=await buildTransferPlan(pkg,snapshot,decisions);result.plan=plan;
-  if(plan.blockers.length||plan.operations.some(op=>op.requiresDecision)||unsupportedNativeTransferActions(plan).length)throw Error('The approved package still has unresolved mappings, content decisions or unsupported native changes.');
+  result.blockers=[...plan.blockers,...plan.operations.filter(op=>op.requiresDecision).map(op=>op.label+': existing content differs and needs an explicit keep/replace decision.'),...unsupportedNativeTransferActions(plan).map(op=>op.label+': this change is not supported by native transfer.')];
+  if(result.blockers.length)throw Error('Preparation blocked by unresolved items: '+result.blockers.join(' '));
   if(plan.operations.some(op=>op.path.at(-1)!=='progression'))throw Error('This rehearsal only stages the missing level links; other proposed changes need separate review.');
   await onCheckpoint(clone({...result,status:'running'}));
   onProgress('Staging the approved level links without saving.');

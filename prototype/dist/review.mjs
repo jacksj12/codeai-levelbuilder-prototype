@@ -1,4 +1,3 @@
-import {insertionToolbar} from './content-ui.mjs';
 import {renderMarkdown} from './preview-markdown.mjs';
 // Local review rules. No network requests or destination writes.
 export const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -29,8 +28,7 @@ export function resourceList(resources){
 }
 export function renderLesson(p,fields,fieldText){
  const esc=escapeHtml;
- const controls=id=>{const activity=p.activities.find(a=>'activity:'+a.id===id);return activity?`<button data-add-section="${esc(activity.id)}">Add section</button>`:'';};
- const card=(id,title,body)=>`<article class="card lesson-preview" tabindex="-1" data-preview-id="${esc(id)}"><div class="card-head"><h3>${esc(title)}</h3><div class="actions"><button data-edit-target="${esc(id)}">Edit</button><button data-flag-target="${esc(id)}">Flag an issue</button>${controls(id)}</div></div><div class="pane">${body}${p.sections.some(s=>s.id===id)?insertionToolbar(p.sections.find(s=>s.id===id)):''}</div></article>`;
+ const card=(id,title,body)=>`<article class="card lesson-preview" tabindex="-1" data-preview-id="${esc(id)}"><div class="card-head"><h3>${esc(title)}</h3><div class="actions"><button data-flag-target="${esc(id)}">Flag an issue</button></div></div><div class="pane">${body}</div></article>`;
  const text=value=>`<div class="preview">${previewText(value,p.resources)||'<em>No content supplied.</em>'}</div>`;
  return '<p>Assembled from your current draft. Markdown support is limited and icons are markers; this approximates Level Builder. Flag issues as you read, then approve the complete lesson.</p>'
   +card('title','Lesson title',text(p.title))

@@ -28,9 +28,12 @@ test('assembled preview includes edits, resources, every section, callouts and l
  const p=generate(fixture);p.sections[0].body='User edited guidance';
  const html=renderLesson(p,[['teacherOverview','Teacher overview']],(k,v)=>v);
  assert.ok(html.includes('User edited guidance'));
+ assert.ok(!html.includes('data-edit-target='));
+ assert.ok(!html.includes('data-insert-kind='));
+ assert.ok(!html.includes('data-add-section='));
  assert.equal((html.match(/data-preview-id=/g)||[]).length,16);
  for(const r of p.resources){assert.ok(html.includes(r.type));assert.ok(html.includes(r.audience));}
- for(const s of p.sections){assert.ok(html.includes('data-edit-target="'+s.id+'"'));for(const c of s.callouts)assert.ok(html.includes(c.type));}
+ for(const s of p.sections){assert.ok(html.includes('data-flag-target="'+s.id+'"'));for(const c of s.callouts)assert.ok(html.includes(c.type));}
  assert.ok(html.includes('csp-unit1-lesson16-cfu3_27_28'));
 });
 test('preview escapes HTML and unsafe resource links',()=>{

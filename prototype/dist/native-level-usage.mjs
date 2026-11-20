@@ -2,9 +2,12 @@
 export async function readAssignedLevelUsage(request={}){
  try{
   if(typeof request==='string')request=JSON.parse(request);
+  const selected=request.destination;
+ const destination=selected||{id:8898985,url:'https://levelbuilder-studio.code.org/courses/6-12-dev-playground/units/16/lessons/11'};
+ if(selected&&(request.practiceConfirmed!==true||!Number.isSafeInteger(selected.id)||selected.id<1||selected.url!=='https://levelbuilder-studio.code.org/lessons/'+selected.id+'/edit'))throw Error('Invalid selected destination.');
   const aliases=['/courses/6-12-dev-playground/units/16/lessons/11/edit','/s/scottsdale-levelbuilder-exploration/lessons/11/edit','/lessons/8898985/edit'];
-  if(location.origin!=='https://levelbuilder-studio.code.org'||!aliases.includes(location.pathname.replace(/\/$/,'')))throw Error('Open the assigned playground editor first.');
-  if(JSON.parse(document.querySelector('script[data-lesson]')?.getAttribute('data-lesson')||'null')?.id!==8898985)throw Error('The assigned lesson identity is missing.');
+  if(location.origin!=='https://levelbuilder-studio.code.org'||!(selected?location.href===selected.url:aliases.includes(location.pathname.replace(/\/$/,''))))throw Error('Open the assigned playground editor first.');
+  if(JSON.parse(document.querySelector('script[data-lesson]')?.getAttribute('data-lesson')||'null')?.id!==destination.id)throw Error('The assigned lesson identity is missing.');
   const {levelId,name}=request;
   if(!/^\d+$/.test(String(levelId))||Number(levelId)<1||typeof name!=='string'||!name.trim())throw Error('An exact existing-level identity is required.');
   const response=await fetch('/levels/'+levelId+'/edit',{credentials:'same-origin',redirect:'error',cache:'no-store'});

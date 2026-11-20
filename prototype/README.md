@@ -28,3 +28,35 @@ Not yet implemented: direct authenticated source import, full destination-aware 
 If the default port serves another project, use `$env:PORT='43829'; npm start` in PowerShell. Startup prints the served directory. Browser storage is separate for each hostname and port; an empty workspace on a new address does not mean an old workspace was deleted.
 
 Tests are engineering checks from observed facts and proposed requirements, not independently approved gold outputs. See IMPLEMENTATION.md for scope and iteration limits.
+
+## Sprint demo — November 20
+
+Open http://127.0.0.1:43829/workflow.html on the existing local preview, or use **Transfer demo** in the lesson workspace. If restarting the server, run it from this checkout's prototype folder with PORT=43829. The default npm start port remains 4316.
+
+1. Click **Load demo lesson**, then **Read fresh destination and prepare review**.
+2. Show the four existing-level links, three assessments, preserved destination content, and restored original editor. Check the approval box and click **Approve and simulate save**.
+3. Show the verified result. Click **Check saved result again — no resend**: the simulated request count stays at one. Reloading retains this run. **Start another isolated demo** creates a new run without deleting the earlier report.
+
+The demo uses the bundled AI Lab source snapshot and synthetic destination/mapping/server data. It performs no authenticated requests and does not touch the accepted saved lesson. The lesson workspace can separately demonstrate preview, editing, issue flags, local approval, and export. Do not describe the demo save as a new live acceptance.
+
+## Reusable companion workflow
+
+Reload the installed native companion once to pick up version 0.5.0. From an owned practice lesson's canonical /lessons/ID/edit tab, open the companion and choose **Open reusable lesson transfer**. Confirm the exact practice URL and permission to edit it, load an approved review-package JSON file, then prepare a fresh review. Keep the original editor tab open. This screen does not fetch accepted-rehearsal.json or local-save-job.json.
+
+Preparation reads current saved data, refuses a stale editor or known unsaved content/settings, verifies existing-level mappings, rehearses and restores supported additions, and checks unit conflicts. Only a separate checkbox/button approves the exact save. It persists a restore point and attempt receipt before at most one PUT, then independently reads saved content. A resumed attempted job is readback-only. Outside edits block guarded cleanup. Downloaded reports are private and include source, destination and restore evidence; do not commit them.
+
+Destination confirmation is the user's attestation that the selected lesson is an editable practice lesson, not automatic classification of official curriculum. Every injected operation rechecks confirmation, canonical URL, tab, and lesson identity. Server permissions still apply. Legacy tools retain their original assigned-playground defaults.
+
+Saved support remains existing-level additions to empty progressions. Title is preserved; other differences, unsupported mappings, and unit conflicts block the run. New destinations and this new companion screen have local regression coverage but have not received a new live saved acceptance. The accepted playground and its restore points were not changed. Extension baseline synchronization and broader content mappings remain future work.
+
+## Reviewed test cleanup — November 20 follow-up
+
+Companion 0.6.0 implements receipt-owned saved-link cleanup. After verified transfer it automatically prepares the exact removals. Cleanup requires separate approval, persists recovery evidence before dispatch, sends at most once, verifies fresh saved data, rechecks without resend, and downloads the report automatically. Imported successful reports support earlier runs. Only unchanged associations from the verified test receipt are removed; underlying levels and unrelated saved content remain. Changed links, outside unsaved edits, stale reviews, and unreadable evidence block dispatch. Native editor refresh is guarded against outside edits.
+
+The complete simulated transfer/cleanup/reload/recheck cycle passed, with exactly one cleanup request and verified restoration. Deduplicated local storage retains complete recovery evidence and reads legacy records. This supersedes earlier statements that saved cleanup is unimplemented. Native cleanup is implemented but has NOT been live-accepted; no live links were removed by this change. Reload the installed companion once to load 0.6.0, then review and approve the exact cleanup on the owning practice lesson.
+
+## Full workspace backups — November 20
+
+The workspace footer now offers Download workspace backup and Open backup as separate workspace. This dedicated format preserves source, generated content, draft edits, baseline, review flags, conflicts, approval and pending resource text. Restoring validates the file and writes a new isolated workspace before navigating; the original workspace is not replaced. Review-package exports remain transfer documents, not workspace backups. Transfer receipts remain separate and are not included.
+
+Verified actual browser download and file-picker restoration into a separate workspace. All 128 regression tests pass, including invalid formats, preserved pending edits, no overwrite and failed storage. User elected to move on from live cleanup testing; live cleanup remains unaccepted and existing live links remain untouched.

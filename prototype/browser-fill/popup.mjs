@@ -4,6 +4,7 @@ import {nativeEditorBridge} from '../dist/native-dom-adapter.mjs';
 import {normalizeNativeCapture} from '../dist/transfer-native.mjs';
 import {buildTransferPlan,packageProblems,clone,digest,canonical} from '../dist/transfer-core.mjs';
 const $=id=>document.getElementById(id);
+$('open-transfer').onclick=async()=>{const [tab]=await chrome.tabs.query({active:true,currentWindow:true});if(tab?.id)await chrome.tabs.create({url:chrome.runtime.getURL('browser-fill/workflow.html')+'#'+tab.id});};
 let state={decisions:{},history:[]},plan=null,running=false,controller;
 try{state=JSON.parse(localStorage.getItem('native-scalar-staging-v1'))||state;}catch{}
 state.decisions??={};state.history??=[];

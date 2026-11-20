@@ -3,7 +3,7 @@ import {SLIDE_MARKER,insertMarkdown,addLevel,addCodeDoc,addResource,addImage} fr
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export function insertionToolbar(section){
- return `<div class="insertion-toolbar" role="group" aria-label="Add content to ${esc(section.title||'teaching section')}">${['Level','Callout','Code Doc','Resource','Slide','Image'].map(kind=>`<button data-insert-kind="${kind}" data-insert-section="${esc(section.id)}"><span aria-hidden="true">⊕</span> ${kind}</button>`).join('')}</div><div class="section-insert"><button data-add-section="${esc(section.activityId)}" data-after-section="${esc(section.id)}">⊕ Activity Section</button></div>`;
+ return `<details class="content-options"><summary>Add content</summary><div class="insertion-toolbar" role="group" aria-label="Add content to ${esc(section.title||'teaching section')}">${['Level','Callout','Code Doc','Resource','Slide','Image'].map(kind=>`<button data-insert-kind="${kind}" data-insert-section="${esc(section.id)}"><span aria-hidden="true">⊕</span> ${kind}</button>`).join('')}</div><div class="section-insert"><button data-add-section="${esc(section.activityId)}" data-after-section="${esc(section.id)}">⊕ Activity Section</button></div></details>`;
 }
 
 export function installContentAuthoring({getDraft,canAddResource=()=>true,changed,openEditor,notice}){

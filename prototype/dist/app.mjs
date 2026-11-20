@@ -1,15 +1,19 @@
+import {workspaceBackup,restoreWorkspace} from './workspace-backup.mjs';
+import {resourceEditor,updateResource,resourceDraft} from './resource-editor.mjs';
 import {insertionToolbar,installContentAuthoring} from './content-ui.mjs';
 import {addCallout,addSection} from './editing.mjs';
 import {approvalBlockers,addFlag,approveDraft,renderLesson,resourceList,previewText} from './review.mjs';
 import {generate,reconcile,reconcileObjectives,objectivesEqual,exportMarkdown,SANDBOX,validateSource} from './core.mjs';
 const $=s=>document.querySelector(s), clone=x=>structuredClone(x), esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fixture=await(await fetch('./fixture.json')).json();
+const workspaceId=new URL(location.href).searchParams.get('workspace');
+const workspaceKey=workspaceId?'lesson-studio-workspace-'+workspaceId:'lesson-studio-v1';
 let state,view='preview',activity='all',editTarget=null;
 const fresh=()=>({source:clone(fixture),generated:generate(fixture),draft:generate(fixture),reviewed:[],flags:[],baseline:null,conflicts:[],approved:false});
-try{state=JSON.parse(localStorage.getItem('lesson-studio-v1'));if(!state?.draft||!state?.source)state=fresh();}catch{state=fresh();}
+try{state=JSON.parse(localStorage.getItem(workspaceKey));if(!state?.draft||!state?.source)state=fresh();}catch{state=fresh();}
 state.flags??=[];
 let storageWarning='';
-const persist=()=>{try{localStorage.setItem('lesson-studio-v1',JSON.stringify(state));storageWarning='';return true;}catch{storageWarning='Browser storage is full or unavailable. Export a backup to preserve your work.';notice('');return false;}};
+const persist=()=>{try{localStorage.setItem(workspaceKey,JSON.stringify(state));storageWarning='';return true;}catch{storageWarning='Browser storage is full or unavailable. Export a backup to preserve your work.';notice('');return false;}};
 function notice(s){$('#notice').textContent=[s,storageWarning].filter(Boolean).join(' ');}
 
 function download(name,data,type){const url=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -25,7 +29,7 @@ function updateSummary(){
  document.querySelectorAll('[data-review]').forEach(el=>{el.checked=state.reviewed.includes(el.dataset.review);});
  const p=state.draft,done=requiredIds().filter(id=>state.reviewed.includes(id)).length,total=requiredIds().length;
  $('#title').textContent=p.title;$('#subtitle').textContent=`${p.course||'Lesson workspace'} · ${p.duration} minutes · source snapshot`;
- $('#metrics').innerHTML=`<div class="metric"><strong>${p.sections.length}</strong><span>Teaching sections</span></div><div class="metric"><strong>${p.resources.length}</strong><span>Linked resources</span></div><div class="metric"><strong>${p.sections.reduce((n,s)=>n+s.callouts.length,0)}</strong><span>Teaching callouts</span></div><div class="metric"><strong>${done} / ${total}</strong><span>Optional review checkmarks</span></div>`;
+ $('#metrics').innerHTML=`<div class="metric"><strong>${p.sections.length}</strong><span>Teaching sections</span></div><div class="metric"><strong>${p.resources.length}</strong><span>Linked resources</span></div><div class="metric"><strong>${p.sections.reduce((n,s)=>n+s.callouts.length,0)}</strong><span>Teaching callouts</span></div><div class="metric"><strong>${approvalBlockers(state).length}</strong><span>Issues to resolve before approval</span></div>`;
  $('#review-state').textContent=state.approved?'Approved locally':state.conflicts.length?`${state.conflicts.length} conflicts to resolve`:'Draft · review needed';$('#review-state').className='pill'+(state.approved?' approved':'');
  const blockers=approvalBlockers(state);
  $('#approve').disabled=blockers.length>0;
@@ -48,7 +52,7 @@ function render(){
  }else if(view==='guide'){
   $('#content').innerHTML=`<div class="section-nav"><button data-activity="all" class="${activity==='all'?'active':''}">All activities</button>${p.activities.map(a=>`<button data-activity="${esc(a.id)}" class="${activity===a.id?'active':''}">${esc(a.title)} · ${a.duration} min</button>`).join('')}</div>`+p.activities.filter(a=>activity==='all'||activity===a.id).map(a=>`<article class="card"><div class="card-head"><h3>${esc(a.title)} · activity settings</h3>${reviewControl('activity:'+a.id)}<button data-add-section="${esc(a.id)}">Add section</button></div><div class="pane row"><div><label>Activity title<input class="editor" data-activity-field="title" data-id="${esc(a.id)}" value="${esc(a.title)}"></label></div><div><label>Duration in minutes<input class="editor" type="number" min="0" data-activity-field="duration" data-id="${esc(a.id)}" value="${a.duration}"></label></div></div></article>`+p.sections.filter(s=>s.activityId===a.id).map(s=>sectionCard(s)).join('')).join('');
  }else if(view==='resources'){
-  $('#content').innerHTML=`<article class="card"><div class="card-head"><h3>Lesson resource records</h3>${reviewControl('resources')}</div>${resourceList(p.resources)}<div class="pane"><p class="muted">Audience is part of each resource record. Answer keys must remain teacher-only. Edit the records below, then apply and review.</p><label for="resource-json">Resource records (JSON)</label><textarea id="resource-json" class="editor" rows="12">${esc(state.resourceBuffer??JSON.stringify(p.resources,null,2))}</textarea><button id="apply-resources">Apply resource edits</button><button id="discard-resources">Discard pending resource edits</button></div></article>`;
+  $('#content').innerHTML=`<article class="card"><div class="card-head"><h3>Edit resources</h3>${reviewControl('resources')}</div><div class="pane">${resourceEditor(p.resources,state.resourceBuffer)}<p id="resource-error" role="alert"></p><div class="actions"><button class="primary" id="apply-resources">Apply resource edits</button><button id="discard-resources">Discard pending edits</button></div></div></article>`;
  }else{
   $('#content').innerHTML=`<div class="card review-card"><h3>${state.baseline?'An approved baseline is saved in this browser.':'No approved baseline yet.'}</h3><p>Review the assembled lesson, then approve the draft to establish a local baseline. Approval does not publish. Import revised sources to compare against that baseline while retaining your edits.</p><p>Incoming source deletions and conflicting changes always need a decision. A field kept intentionally will not be flagged again for the same source snapshot.</p><p class="muted">Current destination content is not connected. This version compares imported sources against the local draft; a live three-way destination comparison remains future work.</p></div>`+(state.conflicts.length?state.conflicts.map((c,i)=>`<article class="card review-card"><h3>${esc(c.label)}</h3><div class="compare"><div class="pane diff-old"><div class="pane-label">Your current draft</div><pre>${esc(display(c.current))}</pre></div><div class="pane diff-new"><div class="pane-label">Incoming source</div><pre>${esc(display(c.incoming))}</pre></div></div><div class="actions"><button data-resolve="keep" data-index="${i}">Keep current</button><button data-resolve="edit" data-index="${i}">Edit manually</button><button data-resolve="incoming" data-index="${i}">${c.incoming==null?'Remove explicitly':'Use incoming'}</button></div></article>`).join(''):'<div class="card empty">No unresolved source conflicts.</div>');
  }
@@ -104,10 +108,11 @@ document.addEventListener('click',async e=>{
  if(b.dataset.copyField)await copy(fieldText(b.dataset.copyField,state.draft.frontMatter[b.dataset.copyField]));
  if(b.dataset.copySection)await copy(state.draft.sections.find(s=>s.id===b.dataset.copySection).body);
  if(b.dataset.resolve){const i=Number(b.dataset.index),c=state.conflicts[i];if(b.dataset.resolve==='incoming')setConflictValue(c,c.incoming);state.conflicts.splice(i,1);state.approved=false;state.reviewed=[];persist();if(b.dataset.resolve==='edit'){editTarget=null;view=c.kind==='section'?'guide':c.key==='resources'?'resources':'front';}render();notice(b.dataset.resolve==='edit'?'Current text retained. Edit it in the draft, then mark it reviewed.':'Conflict decision recorded.');}
- if(b.id==='apply-resources'){try{const resources=JSON.parse($('#resource-json').value);validateSource({...state.source,resources});state.draft.resources=resources;delete state.resourceBuffer;changed('resources');render();notice('Resource edits applied. Review audience and destinations.');}catch(err){notice(err.message);}}
+ if(b.id==='apply-resources'){try{const resources=resourceDraft(state.draft.resources,state.resourceBuffer);validateSource({...state.source,resources});state.draft.resources=resources;delete state.resourceBuffer;changed('resources');render();notice('Resource edits applied. Review audience and destinations.');}catch(err){$('#resource-error').textContent=err.message;}}
 });
 document.addEventListener('input',e=>{
  const el=e.target;
+ if(el.dataset.resourceField){state.resourceBuffer=updateResource(state.draft.resources,state.resourceBuffer,Number(el.dataset.resourceIndex),el.dataset.resourceField,el.value);changed('resources');$('#resource-error').textContent='';}
  if(el.id==='resource-json'){state.resourceBuffer=el.value;changed('resources');}
  if(el.id==='lesson-title'){state.draft.title=el.value;changed('title');}
  if(el.dataset.field){const k=el.dataset.field;const value=['objectives','vocabulary'].includes(k)?el.value.split('\n').filter(x=>x.trim()):el.value;const orderOnly=k==='objectives'&&objectivesEqual(state.draft.frontMatter[k],value);state.draft.frontMatter[k]=value;if(orderOnly)persist();else changed(k);}
@@ -135,3 +140,6 @@ $('#reset').onclick=()=>$('#reset-dialog').showModal();
 $('#confirm-reset').onclick=()=>{state=fresh();persist();render();$('#reset-dialog').close();notice('Local workspace reset to the verified source snapshot.');};
 installContentAuthoring({getDraft:()=>state.draft,canAddResource:()=>state.resourceBuffer==null,changed,openEditor,notice});
 render();
+
+$('#workspace-backup').onclick=()=>download('lesson-workspace-backup.json',JSON.stringify(workspaceBackup(state),null,2),'application/json');
+$('#workspace-restore').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>32000000)throw Error('Choose a workspace backup smaller than 32 MB.');const id=crypto.randomUUID();restoreWorkspace(localStorage,await file.text(),id);const target=new URL(location.href);target.searchParams.set('workspace',id);location.href=target;}catch(error){notice('Backup was not opened. '+error.message+' Your current workspace is unchanged.');}finally{e.target.value='';}};

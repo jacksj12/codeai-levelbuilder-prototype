@@ -31,7 +31,7 @@ export async function runApprovedSave(job,{readSaved,readEditor,checkUsage,stage
  onProgress('Checking the saved baseline and preserving a restore point.');
  const fresh=await readSaved();
  const review=await buildSaveReview(rehearsal,fresh.lesson,{originalLessonJson:fresh.originalLessonJson});
- if(await saveRequestDigest(review)!==requestDigest)throw Error('The refreshed request differs from the approved four-link save.');
+ if(await saveRequestDigest(review)!==requestDigest)throw Error('The refreshed request differs from the approved save.');
  const usage=await checkUsage(review);
  if(usage.passed!==true)throw Error('These levels are already used in the destination unit: '+usage.conflicts.map(c=>c.name).join(', ')+'. Create separately reviewed copies or use another unit; no save was sent.');
  let current=await readEditor();
@@ -41,7 +41,7 @@ export async function runApprovedSave(job,{readSaved,readEditor,checkUsage,stage
  }
  if(!sameEditor(current,rehearsal.initialCapture))throw Error('The editor changed since rehearsal. No save was sent.');
  await checkpoint({status:'before-staging',review,initialCapture:clone(current)});
- onProgress('Staging the four approved links in the playground.');
+ onProgress('Staging the approved level links in the selected lesson.');
  const staged=await stage();
  if(staged.status!=='staged-unsaved'||!staged.checksPassed)throw Error(staged.error||'Approved links could not be staged.');
  await checkpoint({status:'staged-unsaved',review,stage:staged});
@@ -52,7 +52,7 @@ export async function runApprovedSave(job,{readSaved,readEditor,checkUsage,stage
  const ready=await readEditor();await validateStagedSaveReview(review,ready);
  receipt={schemaVersion:1,kind:'approved-native-save-receipt',requestDigest,...(attemptId?{attemptId,priorAttemptedAt:job.previousAttempt.attemptedAt}:{}),status:'dispatching',attempted:true,saveRetried:false,review,restorePoint:clone(latest),stagedCapture:ready,approval:clone(approval),attemptedAt:new Date().toISOString()};
  await persist(receiptKey,receipt);
- onProgress('Saving the four approved links once, then reading the saved lesson back.');
+ onProgress('Saving the approved level links once, then reading the saved lesson back.');
  try{receipt.dispatch=await send({action:'save-approved-review',mode:'explicit-approved-save',review,approval,expectedCaptureDigest:await digest(ready)});}
  catch(error){receipt.dispatch={outcome:'unknown',error:error.message};}
  await persist(receiptKey,receipt);

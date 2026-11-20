@@ -1,3 +1,7 @@
+# Current checkpoint — November 20, 2026
+
+This checkpoint supersedes historical pending-status notes below. Reusable transfer passed live acceptance on Julian Playground - ChatGPT (four links, three assessment flags). Receipt-owned cleanup is implemented and simulation-tested, but live cleanup was deferred by the user. Companion is 0.6.0; user reports reloading it. Full workspace backup/restore is implemented and browser-tested, opening an isolated workspace without replacing the original. All 128 regression tests pass. No live cleanup was performed. Next development: broaden reviewed transfer beyond existing-level links while retaining exact approval, preservation and recovery safeguards.
+
 # Lesson Studio — next-session handoff
 
 Updated November 20, 2026. This is the current checkpoint; older acceptance documents contain historical stages.
@@ -19,9 +23,9 @@ The first save returned HTTP 500 and saved nothing: all four levels were already
 
 Working directory: C:/Users/Jackson Work/Documents/GitHub/codeai-levelbuilder-prototype
 Remote: https://github.com/jacksj12/codeai-levelbuilder-prototype
-Current branch: main. The user explicitly requested this Git checkpoint and push. Check Git status/log to identify the resulting commit; do not infer that every future change is approved for commit or push.
+Current branch: main. November 20 follow-up work is uncommitted; the prior accepted checkpoint is 1b86d7e. The user explicitly requested this Git checkpoint and push. Check Git status/log to identify the resulting commit; do not infer that every future change is approved for commit or push.
 
-Run from prototype with npm start. Node.js is required; no dependencies or API keys are required. Regression command from repository root: node --test --test-isolation=none. Latest result: 101 passed, 0 failed.
+Run from prototype with npm start. Node.js is required; no dependencies or API keys are required. Regression command from repository root: node --test --test-isolation=none. Latest result: 111 passed, 0 failed.
 
 Existing previews: port 43829 serves the main local review app from this clone; port 43830 was used for isolated tests. Verify the served folder before relying on either. Older ports 4316/4317 may belong to older sessions or the backup folder. Do not stop unrelated servers.
 
@@ -53,13 +57,17 @@ Automatic continuation stopped after success. The native editor that was already
 
 ## Next work, in priority order
 
-1. Make the workflow reusable: destination selection, fresh read, proposed changes, review/approval, save and verification; remove dependence on a personal hard-coded job file and one fixed lesson.
+1. Reusable workflow implemented locally (November 20 follow-up): companion 0.5.0 adds explicit canonical practice-destination confirmation, package-file loading, fresh read, rehearsal/restore, proposed-change review, exact approval, one save and independent verification. The new path does not use the private bundled job files. Isolated workflow.html demo is browser-verified, including readback-only recheck and reload. All 111 regression tests pass. Still pending: live acceptance on a separately authorized practice destination; do not use the accepted lesson for replacement tests.
 2. Expand saved transfer support beyond the four-link case. Existing text/structural operations are live-verified unsaved, not general saved acceptance. Objectives, vocabulary, resources, Code Docs, images and other unsupported structures need mappings and preservation checks.
 3. Reduce manual extension reloads; synchronize the native editor baseline after a successful save without overwriting outside edits. Improve progress/recovery presentation.
 4. Direct authenticated Slides/Notion source import and complete destination-aware revision handling. Current source import expects normalized JSON, and review exports do not restore a whole workspace.
 5. UI polish, intentionally deferred by the user. Keep controls understandable and label Status and Run report clearly.
 
 Do not rerun destructive or replacement tests against the accepted saved lesson. Use owned temporary changes and guarded cleanup; maintain restore points. Shared resources persist independently and changes can affect other lessons.
+
+## Sprint demo follow-up
+
+Use http://127.0.0.1:43829/workflow.html. Load demo lesson → prepare review → inspect four links / three assessments → approve simulated save → verify and recheck without resend. This demo uses synthetic destination data and no live writes. It has separate per-run browser storage; existing workspace data and evidence keys are retained. See prototype/README.md for the walkthrough. The user explicitly approved expanding to practice destinations they select and confirm they own; official sources remain read-only. Automatic approval review initially blocked an unconfirmed broadening; after explicit user approval, each selected-destination injection now requires practice confirmation and exact URL/identity checks. No automatic watcher revision was changed and no live lesson or restore evidence was modified.
 
 ## User expectations
 
@@ -68,3 +76,32 @@ Continue authorized work without repeatedly asking to proceed. Ask only for a re
 Browser access: use CUA for browser interaction. Only IAB was exposed to agent controls; Edge was not directly controllable. The user-operated installed extension and its revision watcher performed Edge automation. Do not use shell/CDP/Playwright outside CUA to bypass that limitation. Do not expose CSRF/session values in artifacts or logs.
 
 Detailed evidence: prototype/NATIVE-SCALAR-ACCEPTANCE.md, PREVIEW-REVIEW-ACCEPTANCE.md, TRANSFER-REHEARSAL-ACCEPTANCE.md, browser-fill/README.md and LEVELBUILDER-INTEGRATION.md. The planning Google Doc was not updated. The preserved engineering tests are not independent curriculum acceptance.
+
+## November 20 MVP continuation
+
+Main preview now emphasizes reading, flagging and approval; editing and insertion remain in the existing editors. Guided resource fields preserve metadata and validate audience/HTTPS constraints. Shared palette/readability improved. Transfer startup preserves malformed/unreadable evidence and blocks controls; storage writes return actionable recovery errors. Review expiry is now visible and disables stale approval; current step is programmatically indicated. Browser demo after storage hardening passed prepare, simulated save, reload and readback-only recheck with exactly one simulated send. No new live lesson save. Live acceptance still requires a separately confirmed practice destination and exact-change approval.
+## Repeat-test cleanup requirement
+
+Confirmed November 20, 2026: the user wants the testing workflow to handle removing prior test level associations instead of repeatedly requiring manual unlinking.
+
+Implement a reviewed cleanup phase before the next transfer: identify exact conflicting associations and their owning practice lesson; match them to retained test receipts/restore points; show the proposed unlink changes; preserve unrelated content, assessment settings and identities; retain a fresh backup; obtain exact-change save approval; unlink associations only (never delete underlying levels); independently verify saved removal before retrying preparation. Unknown or externally created associations require an explicit ownership decision. Ambiguous saves must not be automatically resent. This authorizes building the cleanup workflow, not blanket deletion across lessons.
+
+Current implementation still detects duplicate usage and has unsaved owned-staging cleanup. Saved cross-lesson cleanup is not implemented. Prioritize this workflow before repeating further live transfer tests that would require manual unlinking.
+
+## Transfer automation follow-up
+
+Verified downloaded live receipt for Julian Playground - ChatGPT: saved-and-verified, four existing level links, three assessments, no retry. Receipt remains private in Downloads. The source package for this test explicitly preserves destination resources and guidance.
+
+Implemented automatic preparation after package load and practice confirmation, automatic readback-only recheck after a verified save, and automatic evidence downloads on completed saves or failed runs with checkpoints. Browser demo verified one simulated send, automatic recheck and actual report download. All 115 regression tests pass. These changes require the installed companion to reload before Edge uses them. Saved cross-lesson cleanup remains pending and must not be represented as implemented. No extension permissions were expanded.
+
+## Reviewed test cleanup — November 20 follow-up
+
+Companion 0.6.0 implements receipt-owned saved-link cleanup. After verified transfer it automatically prepares the exact removals. Cleanup requires separate approval, persists recovery evidence before dispatch, sends at most once, verifies fresh saved data, rechecks without resend, and downloads the report automatically. Imported successful reports support earlier runs. Only unchanged associations from the verified test receipt are removed; underlying levels and unrelated saved content remain. Changed links, outside unsaved edits, stale reviews, and unreadable evidence block dispatch. Native editor refresh is guarded against outside edits.
+
+The complete simulated transfer/cleanup/reload/recheck cycle passed, with exactly one cleanup request and verified restoration. Deduplicated local storage retains complete recovery evidence and reads legacy records. This supersedes earlier statements that saved cleanup is unimplemented. Native cleanup is implemented but has NOT been live-accepted; no live links were removed by this change. Reload the installed companion once to load 0.6.0, then review and approve the exact cleanup on the owning practice lesson.
+
+## Full workspace backups — November 20
+
+The workspace footer now offers Download workspace backup and Open backup as separate workspace. This dedicated format preserves source, generated content, draft edits, baseline, review flags, conflicts, approval and pending resource text. Restoring validates the file and writes a new isolated workspace before navigating; the original workspace is not replaced. Review-package exports remain transfer documents, not workspace backups. Transfer receipts remain separate and are not included.
+
+Verified actual browser download and file-picker restoration into a separate workspace. All 128 regression tests pass, including invalid formats, preserved pending edits, no overwrite and failed storage. User elected to move on from live cleanup testing; live cleanup remains unaccepted and existing live links remain untouched.

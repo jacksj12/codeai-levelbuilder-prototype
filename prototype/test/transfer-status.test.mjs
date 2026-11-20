@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {reviewWindow} from '../dist/transfer-status.mjs';
+test('approval window mirrors backend expiry boundary and handles invalid evidence',()=>{assert.equal(reviewWindow({expiresAt:100},100).expired,false);assert.equal(reviewWindow({expiresAt:100},101).expired,true);assert.equal(reviewWindow({},0).expired,true);assert.equal(reviewWindow(null).expired,false);assert.match(reviewWindow({expiresAt:120000},0).text,/2 minute/);});

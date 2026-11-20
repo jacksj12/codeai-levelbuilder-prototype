@@ -9,9 +9,12 @@ export async function nativeEditorBridge(request={action:'read'}){
  if(typeof request==='string')request=JSON.parse(request);
  const checkDeadline=()=>{if(Number.isFinite(request.deadlineAt)&&Date.now()>request.deadlineAt)throw Error('The native operation expired before the next change. No further control was changed.');};
  const settle=()=>new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=()=>{channel.port1.close();channel.port2.close();resolve();};channel.port2.postMessage(null);});
+ const selected=request.destination;
+ const destination=selected||{id:8898985,url:'https://levelbuilder-studio.code.org/courses/6-12-dev-playground/units/16/lessons/11'};
+ if(selected&&(request.practiceConfirmed!==true||!Number.isSafeInteger(selected.id)||selected.id<1||selected.url!=='https://levelbuilder-studio.code.org/lessons/'+selected.id+'/edit'))throw Error('Invalid selected destination.');
  const aliases=['/courses/6-12-dev-playground/units/16/lessons/11/edit','/s/scottsdale-levelbuilder-exploration/lessons/11/edit','/lessons/8898985/edit'];
  const fixture=request.fixture===true&&location.protocol==='http:'&&['127.0.0.1','localhost'].includes(location.hostname)&&location.pathname==='/native-adapter-fixture.html'&&document.querySelector('script[data-native-adapter-fixture="true"]');
- if(!fixture&&(location.origin!=='https://levelbuilder-studio.code.org'||!aliases.includes(location.pathname.replace(/\/$/,''))))throw Error('This is not the assigned sandbox editor. Official and unknown lessons are refused.');
+ if(!fixture&&(location.origin!=='https://levelbuilder-studio.code.org'||!(selected?location.href===selected.url:aliases.includes(location.pathname.replace(/\/$/,'')))))throw Error('This is not the assigned sandbox editor. Official and unknown lessons are refused.');
  const labels={title:'Title',teacherOverview:'Overview',studentOverview:'Student Overview',purpose:'Purpose',preparation:'Preparation',assessmentOpportunities:'Assessment Opportunities'};
  const labelNode=label=>{
   const matches=[...document.querySelectorAll('#edit-container label')].filter(el=>[...el.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim()===label);
@@ -24,7 +27,7 @@ export async function nativeEditorBridge(request={action:'read'}){
  };
  function read(){
   const bootstrap=document.querySelector('script[data-lesson]');if(!bootstrap)throw Error('Lesson identity evidence is missing.');
-  const saved=JSON.parse(bootstrap.getAttribute('data-lesson'));if(saved.id!==8898985)throw Error('The sandbox lesson identity does not match.');
+  const saved=JSON.parse(bootstrap.getAttribute('data-lesson'));if(saved.id!==destination.id)throw Error('The sandbox lesson identity does not match.');
   const blockers=[],fields={},managed=new Set();
   for(const key of Object.keys(labels))try{const node=fieldNode(key);fields[key]=node.value;managed.add(node);}catch(error){blockers.push(error.message);}
   const hidden={};
@@ -59,7 +62,7 @@ export async function nativeEditorBridge(request={action:'read'}){
   // Headerless tables inside a level token are derived usage previews. Their
   // underlying associations/settings are protected in unmanagedActivities.
   const otherTables=[...document.querySelectorAll('#edit-container table')].filter(table=>{if(!table.querySelector('thead')&&table.querySelector('.uitest-ProgressPill'))return false;if(table.querySelector('thead'))return true;let parent=table.parentElement;while(parent&&!parent.classList.contains('uitest-activity-card')){if([...parent.children].some(n=>n.classList.contains('uitest-level-token-name')))return false;parent=parent.parentElement;}return true;}).map(table=>({headers:[...table.querySelectorAll('thead th')].map(c=>c.textContent.trim()),rows:[...table.querySelectorAll('tbody tr')].map(row=>row.textContent.trim())})).filter(t=>!['Key|Name|Type|Audience|URL|Actions','Word|Definition|Actions','Description|Levels|Actions'].includes(t.headers.join('|')));
-  return {schemaVersion:1,kind:'native-dom-capture',readerVersion:'native-scalars-v1',fixture:Boolean(fixture),destination:{id:8898985,url:'https://levelbuilder-studio.code.org/courses/6-12-dev-playground/units/16/lessons/11'},saved,
+  return {schemaVersion:1,kind:'native-dom-capture',readerVersion:'native-scalars-v1',fixture:Boolean(fixture),destination:structuredClone(destination),saved,
    live:{fields,activities:hidden.activities,objectives:hidden.objectives,resources,vocabularies},
    protection:{bootstrap:saved,unmanagedActivities,objectives:hidden.objectives,resources,vocabularies,controls,otherTables},blockers,remoteWrites:false};
  }
@@ -67,27 +70,48 @@ export async function nativeEditorBridge(request={action:'read'}){
  const fingerprint=async value=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(stable(value))))].map(b=>b.toString(16).padStart(2,'0')).join('');
  if(request.action==='read')return read();
  checkDeadline();
- if(request.action==='save-approved-review'){
-  if(fixture||request.mode!=='explicit-approved-save'||request.approval?.approved!==true)throw Error('Explicit approval for this playground save is required.');
+ if(request.action==='save-approved-review'||request.action==='save-approved-cleanup'){
+  const cleanup=request.action==='save-approved-cleanup';
+  if(fixture||request.mode!==(cleanup?'explicit-approved-cleanup':'explicit-approved-save')||request.approval?.approved!==true)throw Error('Explicit approval for this playground save is required.');
   const review=request.review,copy=structuredClone(review);delete copy.id;
-  if(review.kind!=='native-save-review'||await fingerprint(copy)!==review.id||Date.now()>review.expiresAt||review.destination.id!==8898985)throw Error('The approved review is invalid or expired.');
+  if(review.kind!==(cleanup?'native-cleanup-review':'native-save-review')||await fingerprint(copy)!==review.id||Date.now()>review.expiresAt||review.destination.id!==destination.id||review.destination.url!==destination.url)throw Error('The approved review is invalid or expired.');
   const req=review.request;
-  if(req.method!=='PUT'||req.url!=='https://levelbuilder-studio.code.org/lessons/8898985'||req.contentType!=='application/json;charset=UTF-8')throw Error('The approved save target changed.');
+  if(req.method!=='PUT'||req.url!=='https://levelbuilder-studio.code.org/lessons/'+destination.id||req.contentType!=='application/json;charset=UTF-8')throw Error('The approved save target changed.');
   const payload=JSON.parse(req.body),semantic=structuredClone(payload);
   for(const key of ['objectives','activities','resources','vocabularies','programmingExpressions','standards','opportunityStandards','jitPlConceptIds','announcements','originalLessonData'])semantic[key]=JSON.parse(semantic[key]);
   const approvedDigest=await fingerprint({method:req.method,url:req.url,contentType:req.contentType,payload:semantic});
   if(approvedDigest!==request.approval.approvedRequestDigest)throw Error('The request does not match the user-approved save.');
   const current=read();if(current.blockers.length||await fingerprint(current)!==request.expectedCaptureDigest)throw Error('The editor changed before saving.');
-  const fresh=await fetch('/lessons/8898985/edit',{credentials:'same-origin',redirect:'error',cache:'no-store'});
+  const fresh=await fetch('/lessons/'+destination.id+'/edit',{credentials:'same-origin',redirect:'error',cache:'no-store'});
   if(!fresh.ok)throw Error('The final saved-baseline check failed.');
   const doc=new DOMParser().parseFromString(await fresh.text(),'text/html'),raw=doc.querySelector('script[data-lesson]')?.getAttribute('data-lesson');
   if(!raw||raw!==payload.originalLessonData||await fingerprint(JSON.parse(raw))!==review.baselineDigest)throw Error('Saved content changed. The save was blocked.');
+  if(cleanup){
+   const source=review.sourceReceipt,sourceReview=source?.review,sourceCopy=structuredClone(sourceReview||{});delete sourceCopy.id;
+   if(source?.status!=='saved-and-verified'||source.attempted!==true||source.verification?.passed!==true||sourceReview?.destination.id!==destination.id||await fingerprint(sourceCopy)!==sourceReview.id)throw Error('Cleanup ownership evidence is invalid.');
+   const freshSaved=JSON.parse(raw),expected=structuredClone(freshSaved),seen=new Set();
+   if(!Array.isArray(review.removals)||!review.removals.length||review.removals.length!==sourceReview.changes.length)throw Error('Cleanup scope is incomplete.');
+   for(const removal of review.removals){
+    if(seen.has(removal.sectionId))throw Error('Duplicate cleanup section.');seen.add(removal.sectionId);
+    const find=lesson=>lesson.activities.flatMap(a=>a.activitySections).find(s=>s.id===removal.sectionId);
+    const original=find(sourceReview.baseline),recorded=find(source.readback),current=find(freshSaved),target=find(expected),change=sourceReview.changes.find(c=>c.sectionId===removal.sectionId);
+    if(!original||!recorded||!current||!change||original.scriptLevels.length||stable(current.scriptLevels)!==stable(recorded.scriptLevels)||current.progressionName!==recorded.progressionName||recorded.scriptLevels.length!==change.addLevels.length)throw Error('Saved test links changed or ownership is incomplete.');
+    for(const [i,link]of recorded.scriptLevels.entries())if(!link.id||link.levels?.length!==1||String(link.levels[0].id)!==String(change.addLevels[i].levelId)||Boolean(link.assessment)!==Boolean(change.addLevels[i].assessment))throw Error('Cleanup link identity differs from the saved test.');
+    target.scriptLevels=structuredClone(original.scriptLevels);target.progressionName=original.progressionName;
+   }
+   if(stable(expected)!==stable(review.expectedSaved)||stable(semantic.activities)!==stable(expected.activities))throw Error('Cleanup includes unreviewed content changes.');
+   const allowed=['name','overview','studentOverview','assessmentOpportunities','purpose','preparation','lockable','hasLessonPlan','creativeCommonsLicense','background','assessment','unplugged','objectives','activities','resources','vocabularies','programmingExpressions','standards','opportunityStandards','jitPlConceptIds','announcements','originalLessonData'];
+   if(Object.keys(semantic).length!==allowed.length||Object.keys(semantic).some(k=>!allowed.includes(k)))throw Error('Unexpected cleanup request fields.');
+   for(const k of allowed.slice(0,12))if(stable(semantic[k])!==stable(freshSaved[k]))throw Error('Cleanup changes unrelated lesson fields.');
+   const collections={objectives:freshSaved.objectives,resources:freshSaved.resources.map(r=>r.key),vocabularies:freshSaved.vocabularies.map(r=>r.key),programmingExpressions:freshSaved.programmingExpressions,standards:freshSaved.standards,opportunityStandards:freshSaved.opportunityStandards,jitPlConceptIds:freshSaved.jitPlConcepts.map(r=>r.id),announcements:freshSaved.announcements};
+   for(const [k,v]of Object.entries(collections))if(stable(semantic[k])!==stable(v))throw Error('Cleanup changes unrelated collections.');
+  }
   const csrf=document.querySelector('meta[name="csrf-token"]')?.content;
   if(!csrf)throw Error('The editor sign-in token is unavailable.');
   checkDeadline();if(await fingerprint(read())!==request.expectedCaptureDigest)throw Error('The editor changed during the final check.');
   // The controller persisted the attempt before this call. Never retry here.
   try{
-   const response=await fetch('/lessons/8898985',{method:'PUT',credentials:'same-origin',redirect:'error',headers:{'Content-Type':req.contentType,'Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-Token':csrf},body:req.body});
+   const response=await fetch('/lessons/'+destination.id,{method:'PUT',credentials:'same-origin',redirect:'error',headers:{'Content-Type':req.contentType,'Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-Token':csrf},body:req.body});
    let errorMessage;
    if(!response.ok){
     const contentType=response.headers.get('Content-Type')||'',text=await response.text();

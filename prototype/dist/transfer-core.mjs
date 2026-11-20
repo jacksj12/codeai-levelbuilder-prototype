@@ -1,4 +1,5 @@
 import {SANDBOX,objectivesEqual} from './core.mjs';
+import {validDestination} from './destination.mjs';
 import {approvalBlockers} from './review.mjs';
 
 export const DESTINATION_ID=8898985;
@@ -35,14 +36,14 @@ export function normalizedDraft(draft){
   }))}))};
 }
 export function validateDestination(snapshot){
- if(snapshot?.schemaVersion!==1||snapshot.kind!=='browser-editor-snapshot'||snapshot.destination?.id!==DESTINATION_ID||snapshot.destination?.url!==SANDBOX)throw Error('The destination snapshot does not match the assigned practice lesson.');
+ if(snapshot?.schemaVersion!==1||snapshot.kind!=='browser-editor-snapshot'||!validDestination(snapshot.destination))throw Error('The destination snapshot does not match the assigned practice lesson.');
  if(!snapshot.lesson?.frontMatter||!Array.isArray(snapshot.lesson.activities)||!Array.isArray(snapshot.lesson.resources))throw Error('The destination snapshot is incomplete.');
  if(!Array.isArray(snapshot.catalog?.resources)||!Array.isArray(snapshot.catalog?.levels)||!Array.isArray(snapshot.blockers))throw Error('The destination is missing its mapping catalog or capture checks.');
  return snapshot;
 }
 export function packageProblems(pkg){
  const errors=[];
- if(pkg?.schemaVersion!==1||pkg.sandbox!==SANDBOX)throw Error('Choose a review package for the assigned practice lesson.');
+ if(pkg?.schemaVersion!==1||!(pkg.sandbox===SANDBOX||/^https:\/\/levelbuilder-studio\.code\.org\/lessons\/[1-9]\d*\/edit$/.test(pkg.sandbox)))throw Error('Choose a review package for the assigned practice lesson.');
  if(canonical(pkg).length>8_000_000)throw Error('This package exceeds the 8 MB transfer-review limit. Replace embedded assets with verified HTTPS links.');
  if(pkg.status!=='approved-locally')errors.push('Approve this draft locally before transfer.');
  if(!Array.isArray(pkg.conflicts))errors.push('The package is missing revision-conflict information.');

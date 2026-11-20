@@ -1,4 +1,5 @@
 import {DESTINATION_ID,TEXT_FIELDS} from './transfer-core.mjs';
+import {validDestination} from './destination.mjs';
 import {SANDBOX} from './core.mjs';
 
 // This function is serialized by the browser extension: keep it self-contained.
@@ -33,7 +34,7 @@ export function captureAssignedEditor(){
 }
 const tipNames={teachingTip:'Teaching Tip',contentCorner:'Content Corner',discussionGoal:'Discussion Goal',assessmentOpportunity:'Assessment Opportunity',ethicsOpportunity:'Ethics Opportunity'};
 export function normalizeNativeCapture(capture){
- if(capture?.kind!=='native-dom-capture'||capture.destination?.id!==DESTINATION_ID||capture.destination.url!==SANDBOX)throw Error('Choose a capture of the assigned practice lesson.');
+ if(capture?.kind!=='native-dom-capture'||!validDestination(capture.destination))throw Error('Choose a capture of the assigned practice lesson.');
  const {saved,live}=capture,blockers=[...(capture.blockers||[])],catalog={resources:[],levels:[]};
  const nativeMinutes=(value,label)=>{
   if(value===''||value==null)return null;
@@ -41,7 +42,7 @@ export function normalizeNativeCapture(capture){
   if(typeof number!=='number'||!Number.isSafeInteger(number)||number<0){blockers.push(label+' has invalid or non-whole-minute timing.');return value;}
   return number;
  };
- if(saved?.id!==DESTINATION_ID||!Array.isArray(saved.resources)||!Array.isArray(live.activities)||!Array.isArray(live.objectives)||!Array.isArray(live.resources))throw Error('The native capture is incomplete.');
+ if(saved?.id!==capture.destination.id||!Array.isArray(saved.resources)||!Array.isArray(live.activities)||!Array.isArray(live.objectives)||!Array.isArray(live.resources))throw Error('The native capture is incomplete.');
  const frontMatter={};for(const key of TEXT_FIELDS){frontMatter[key]=live.fields[key]??'';if(typeof live.fields[key]!=='string')blockers.push('Current '+key+' was not captured.');}
  frontMatter.objectives=live.objectives.map(o=>o.description);
  frontMatter.vocabulary=(live.vocabularies||saved.vocabularies||[]).map(v=>v.word+': '+v.definition);
@@ -62,7 +63,7 @@ export function normalizeNativeCapture(capture){
   return {title:s.name??s.displayName??'',duration:nativeMinutes(s.duration,'Section'),body:s.description??s.text??'',remarks:Boolean(s.remarks),
    callouts:(s.tips||[]).map(t=>({type:tipNames[t.type]||t.type,body:t.markdown||''})),progression:levels.length?{title:s.progressionName||'',levels}:null};
  })}));
- return {schemaVersion:1,kind:'browser-editor-snapshot',destination:{id:DESTINATION_ID,url:SANDBOX},mode:'native-read-only',
+ return {schemaVersion:1,kind:'browser-editor-snapshot',destination:structuredClone(capture.destination),mode:'native-read-only',
   lesson:{title:live.fields.title??'',frontMatter,resources:catalog.resources.map(r=>({...r})),activities},catalog,
   blockers:[...new Set(blockers)],...(capture.protection?{nativeProtection:structuredClone(capture.protection)}:{}),raw:structuredClone(capture)};
 }

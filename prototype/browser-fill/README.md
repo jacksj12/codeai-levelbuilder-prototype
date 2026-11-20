@@ -48,3 +48,13 @@ The approved original-four-link save completed live with HTTP 200 after the user
 ### Git handoff default
 
 Version 0.4.0 uses the verification-release revision: ordinary unsaved field and temporary-section/callout checks only. It does not load a personal accepted package or execute an approved-save job. Those ignored files remain local for evidence and recovery. Configuring another accepted-package rehearsal or save is separate work, with fresh destination review and authorization. No extension permissions changed.
+
+## Reusable transfer screen (0.5.0)
+
+The popup now includes **Open reusable lesson transfer**. It opens a separate screen bound to the originating tab, accepts a user-selected canonical practice destination and an uploaded approved package, and prepares a review before explicit save approval. See the sprint-demo and reusable-workflow instructions in ../README.md. No private bundled job file is needed for this path. The old verification and accepted-save paths are retained for historical recovery; their private files and receipts are unchanged. No new live save was performed while developing this screen.
+
+## Reviewed test cleanup — November 20 follow-up
+
+Companion 0.6.0 implements receipt-owned saved-link cleanup. After verified transfer it automatically prepares the exact removals. Cleanup requires separate approval, persists recovery evidence before dispatch, sends at most once, verifies fresh saved data, rechecks without resend, and downloads the report automatically. Imported successful reports support earlier runs. Only unchanged associations from the verified test receipt are removed; underlying levels and unrelated saved content remain. Changed links, outside unsaved edits, stale reviews, and unreadable evidence block dispatch. Native editor refresh is guarded against outside edits.
+
+The complete simulated transfer/cleanup/reload/recheck cycle passed, with exactly one cleanup request and verified restoration. Deduplicated local storage retains complete recovery evidence and reads legacy records. This supersedes earlier statements that saved cleanup is unimplemented. Native cleanup is implemented but has NOT been live-accepted; no live links were removed by this change. Reload the installed companion once to load 0.6.0, then review and approve the exact cleanup on the owning practice lesson.

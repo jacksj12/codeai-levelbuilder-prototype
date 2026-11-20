@@ -1,5 +1,5 @@
-import {clone,canonical,digest,validatePlan,DESTINATION_ID} from './transfer-core.mjs';
-import {SANDBOX} from './core.mjs';
+import {clone,canonical,digest,validatePlan} from './transfer-core.mjs';
+import {validDestination} from './destination.mjs';
 import {normalizeNativeCapture} from './transfer-native.mjs';
 
 const ROOT_SETTINGS=['lockable','hasLessonPlan','creativeCommonsLicense','background','assessment','unplugged'];
@@ -18,9 +18,9 @@ function comparableLesson(lesson){const value=clone(lesson);value.frontMatter.ob
 export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),originalLessonJson}={}){
  assert(rehearsal?.status==='passed-and-restored'&&rehearsal.checksPassed===true&&rehearsal.restored===true,'A completed and restored accepted-package rehearsal is required.');
  const plan=rehearsal.plan;await validatePlan(plan);
- assert(plan.destination.id===DESTINATION_ID&&plan.destination.url===SANDBOX,'The reviewed save is not for the assigned playground.');
+ assert(validDestination(plan.destination),'Choose a valid reviewed practice destination.');
  const initial=rehearsal.initialCapture,staged=rehearsal.stagedCapture;
- assert(initial?.saved?.id===DESTINATION_ID&&staged?.saved?.id===DESTINATION_ID&&freshSaved?.id===DESTINATION_ID,'The saved lesson identity does not match the assigned playground.');
+ assert(initial?.saved?.id===plan.destination.id&&staged?.saved?.id===plan.destination.id&&freshSaved?.id===plan.destination.id,'The saved lesson identity does not match the selected destination.');
  assert(canonical(freshSaved)===canonical(initial.saved)&&canonical(staged.saved)===canonical(initial.saved),'Saved content changed after the rehearsal. Read and review it again; no save was prepared.');
  assert(typeof originalLessonJson==='string'&&canonical(JSON.parse(originalLessonJson))===canonical(freshSaved),'The exact original server snapshot is required for its conflict check.');
  assert(canonical(initial)===canonical(rehearsal.finalCapture),'The rehearsal did not restore its complete original capture.');
@@ -49,37 +49,25 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
    addLevels:after.scriptLevels.map(sl=>({name:sl.levels[0].name,levelId:sl.levels[0].id,assessment:Boolean(sl.assessment)}))});
  }
  assert(canonical(projection)===canonical(initial),'Unreviewed native content or settings changed during staging.');
- const payload={};
- for(const key of [...ROOT_TEXT,...ROOT_SETTINGS]){assert(Object.prototype.hasOwnProperty.call(freshSaved,key),'Saved field '+key+' is missing.');payload[key]=clone(freshSaved[key]);}
- const standards=records(freshSaved.standards,'standards'),opportunity=records(freshSaved.opportunityStandards,'opportunity standards'),expressions=records(freshSaved.programmingExpressions,'code definitions');
- for(const item of [...standards,...opportunity])assert(typeof item.frameworkShortcode==='string'&&typeof item.shortcode==='string','A saved standard mapping is incomplete.');
- for(const item of expressions)assert(typeof item.programmingEnvironmentName==='string'&&typeof item.key==='string','A saved code-definition mapping is incomplete.');
- payload.objectives=JSON.stringify(records(freshSaved.objectives,'objectives'));
- payload.activities=JSON.stringify(candidate.activities);
- payload.resources=JSON.stringify(keyList(freshSaved.resources,'resources'));
- payload.vocabularies=JSON.stringify(keyList(freshSaved.vocabularies,'vocabulary'));
- payload.programmingExpressions=JSON.stringify(expressions);payload.standards=JSON.stringify(standards);payload.opportunityStandards=JSON.stringify(opportunity);
- payload.jitPlConceptIds=JSON.stringify(records(freshSaved.jitPlConcepts,'teaching concepts').map(c=>{assert(Number.isSafeInteger(c.id),'A saved teaching-concept identity is missing.');return c.id;}));
- assert(freshSaved.announcements===null||Array.isArray(freshSaved.announcements),'Saved announcements are incomplete.');payload.announcements=JSON.stringify(freshSaved.announcements);
- payload.originalLessonData=originalLessonJson;
+ const payload=buildSavedLessonPayload(freshSaved,candidate,originalLessonJson);
  const sections=normalized.lesson.activities.flatMap(a=>a.sections),levels=sections.flatMap(s=>s.progression?.levels||[]);
  const expectedCounts={activities:normalized.lesson.activities.length,sections:sections.length,callouts:sections.reduce((n,s)=>n+s.callouts.length,0),resources:normalized.lesson.resources.length,levels:levels.length,assessments:levels.filter(l=>l.assessment).length};
  const review={schemaVersion:1,kind:'native-save-review',status:'ready-for-review',createdAt:now,expiresAt:now+10*60*1000,
-  destination:{id:DESTINATION_ID,url:SANDBOX},remoteWrites:false,saveAllowed:false,requiresUserApproval:true,requiresRestaging:true,
+  destination:clone(plan.destination),remoteWrites:false,saveAllowed:false,requiresUserApproval:true,requiresRestaging:true,
   baselineDigest:await digest(freshSaved),stagedDigest:await digest(staged),rehearsalPlanId:plan.id,changes,
-  request:{method:'PUT',url:'https://levelbuilder-studio.code.org/lessons/'+DESTINATION_ID,contentType:'application/json;charset=UTF-8',body:JSON.stringify(payload)},
+  request:{method:'PUT',url:'https://levelbuilder-studio.code.org/lessons/'+plan.destination.id,contentType:'application/json;charset=UTF-8',body:JSON.stringify(payload)},
   baseline:clone(freshSaved),baselineNativeProtection:clone(initial.protection),expectedLesson:clone(plan.expectedLesson),expectedCounts,
   preserved:{activityIds:freshSaved.activities.map(a=>a.id),sectionIds:freshSaved.activities.flatMap(a=>a.activitySections.map(s=>s.id)),resourceKeys:JSON.parse(payload.resources),vocabularyKeys:JSON.parse(payload.vocabularies)},
-  limitation:'Dry run only. The deployed write response has not been exercised. Restage, recheck saved content, and obtain approval for this exact review before any save.'};
+  limitation:'Review only until explicitly approved. Existing-level additions have prior live acceptance on the assigned playground; other selected destinations require their own saved verification.'};
  review.id=await digest(review);return review;
 }
 
 export async function validateSaveReview(review,{freshSaved,now=Date.now(),checkExpiry=true}={}){
  assert(review?.kind==='native-save-review'&&review.saveAllowed===false&&review.remoteWrites===false,'Invalid dry-run save review.');
  const copy=clone(review);delete copy.id;assert(await digest(copy)===review.id,'The save review changed. Prepare it again.');
- assert(review.destination.id===DESTINATION_ID&&review.destination.url===SANDBOX&&review.request.method==='PUT'&&review.request.url==='https://levelbuilder-studio.code.org/lessons/'+DESTINATION_ID,'The save destination changed.');
+ assert(validDestination(review.destination)&&review.request.method==='PUT'&&review.request.url==='https://levelbuilder-studio.code.org/lessons/'+review.destination.id,'The save destination changed.');
  assert(!checkExpiry||now<=review.expiresAt,'This save review expired. Read and review the lesson again.');
- if(freshSaved)assert(freshSaved.id===DESTINATION_ID&&await digest(freshSaved)===review.baselineDigest,'Saved content changed after review. Do not save or retry the old request.');
+ if(freshSaved)assert(freshSaved.id===review.destination.id&&await digest(freshSaved)===review.baselineDigest,'Saved content changed after review. Do not save or retry the old request.');
  return review;
 }
 
@@ -93,7 +81,7 @@ export async function saveRequestDigest(review){
 
 export async function validateStagedSaveReview(review,capture){
  await validateSaveReview(review);
- assert(capture?.saved?.id===DESTINATION_ID&&await digest(capture.saved)===review.baselineDigest,'The staged editor baseline changed.');
+ assert(capture?.saved?.id===review.destination.id&&await digest(capture.saved)===review.baselineDigest,'The staged editor baseline changed.');
  const normalized=normalizeNativeCapture(capture);assert(!normalized.blockers.length,normalized.blockers.join(' '));
  assert(canonical(comparableLesson(normalized.lesson))===canonical(comparableLesson(review.expectedLesson)),'The current staged editor differs from the approved result.');
  const protection=clone(capture.protection),requested=JSON.parse(JSON.parse(review.request.body).activities);
@@ -118,7 +106,7 @@ export async function validateStagedSaveReview(review,capture){
 export async function verifySavedReadback(review,saved){
  await validateSaveReview(review,{checkExpiry:false});
  const mismatches=[];
- if(saved?.id!==DESTINATION_ID)return {passed:false,mismatches:['The returned lesson identity is wrong.']};
+ if(saved?.id!==review.destination.id)return {passed:false,mismatches:['The returned lesson identity is wrong.']};
  if(!['activities','resources','objectives','vocabularies'].every(key=>Array.isArray(saved[key]))||saved.activities.some(a=>!Array.isArray(a.activitySections)))return {passed:false,mismatches:['The saved response is incomplete; preservation cannot be verified.'],saved:true,saveRetried:false};
  const capture={schemaVersion:1,kind:'native-dom-capture',destination:review.destination,saved,blockers:[],live:{
   fields:{title:saved.name,teacherOverview:saved.overview||'',studentOverview:saved.studentOverview||'',purpose:saved.purpose||'',preparation:saved.preparation||'',assessmentOpportunities:saved.assessmentOpportunities||''},
@@ -142,4 +130,21 @@ export async function verifySavedReadback(review,saved){
  if(canonical(projection)!==canonical(review.baseline))mismatches.push('An existing record, setting or association changed outside the reviewed additions.');
  const passed=mismatches.length===0,baselineUnchanged=canonical(saved)===canonical(review.baseline);
  return {passed,mismatches:[...new Set(mismatches)],saved:passed?true:baselineUnchanged?false:null,baselineUnchanged,saveRetried:false};
+}
+
+export function buildSavedLessonPayload(freshSaved,candidate,originalLessonJson){
+ const payload={};
+ for(const key of [...ROOT_TEXT,...ROOT_SETTINGS]){assert(Object.prototype.hasOwnProperty.call(freshSaved,key),'Saved field '+key+' is missing.');payload[key]=clone(freshSaved[key]);}
+ const standards=records(freshSaved.standards,'standards'),opportunity=records(freshSaved.opportunityStandards,'opportunity standards'),expressions=records(freshSaved.programmingExpressions,'code definitions');
+ for(const item of [...standards,...opportunity])assert(typeof item.frameworkShortcode==='string'&&typeof item.shortcode==='string','A saved standard mapping is incomplete.');
+ for(const item of expressions)assert(typeof item.programmingEnvironmentName==='string'&&typeof item.key==='string','A saved code-definition mapping is incomplete.');
+ payload.objectives=JSON.stringify(records(freshSaved.objectives,'objectives'));
+ payload.activities=JSON.stringify(candidate.activities);
+ payload.resources=JSON.stringify(keyList(freshSaved.resources,'resources'));
+ payload.vocabularies=JSON.stringify(keyList(freshSaved.vocabularies,'vocabulary'));
+ payload.programmingExpressions=JSON.stringify(expressions);payload.standards=JSON.stringify(standards);payload.opportunityStandards=JSON.stringify(opportunity);
+ payload.jitPlConceptIds=JSON.stringify(records(freshSaved.jitPlConcepts,'teaching concepts').map(c=>{assert(Number.isSafeInteger(c.id),'A saved teaching-concept identity is missing.');return c.id;}));
+ assert(freshSaved.announcements===null||Array.isArray(freshSaved.announcements),'Saved announcements are incomplete.');payload.announcements=JSON.stringify(freshSaved.announcements);
+ payload.originalLessonData=originalLessonJson;
+ return payload;
 }
