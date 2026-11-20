@@ -1,3 +1,9 @@
+# Release delivery boundary
+
+Release 0.10.2 code and tests committed as 641e673. Push is pending: Git Credential Manager waited for interactive authentication; a noninteractive retry confirmed credentials unavailable. No remote success claimed. Restore GitHub sign-in, then push the local tested commits.
+
+The retained isolated native editor contains the exact reviewed unsaved proposal. Private exact review: AI-Lab-save-ready-review.md; evidence: native-teaching-rehearsal-evidence.json; screenshots: native-teaching-review.jpg and native-teaching-review-full.jpg, all in the original Documents/ChatGPT workspace. This is a native UI save review, not an approved companion request. Before any user-approved native Save and Keep Editing, compare current staged values and fresh saved baseline again. Live save approval is still absent.
+
 # Current checkpoint — 0.10.2 hardening and native staging
 
 This checkpoint supersedes the historical status sections below. The regression suite passes all 168 tests. The native-shaped browser fixture “Check new activities and existing-section callout” passed and restored its complete baseline using modern dialog handling, with saved=false and zero lesson Save controls invoked. Companion 0.10.2 recognizes modern alertdialog removal confirmations, refuses existing-callout edits when a section contains multiple callouts until native targeting is verified, and checks saved existing-section links for exact order, active identity, variants and all supported flags. The guard blocks the whole unsupported batch before staging a valid prefix. Cleared-baseline tests confirm documented null-to-empty editor defaults without weakening outside-edit checks.
