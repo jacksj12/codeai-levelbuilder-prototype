@@ -1,3 +1,15 @@
+# Baseline-button feedback fix — companion 0.10.5
+
+User reported that the package-empty baseline button appeared to do nothing on selected practice lesson 8898984. No fresh live report was available. The exact error from their browser remains unknown; do not claim a live root cause or successful live read.
+
+Established code defects: baseline had no immediate progress message, its confirmation/access/read errors appeared only in Status farther down the page, and a failure before the first capture did not download or enable a report. Fixed by placing a version/progress/error status and a manual Download baseline report button directly next to the baseline control, showing a Reading baseline state immediately, reporting each read phase, and exporting early-error evidence even without a checkpoint. Retained review/save/recovery runs now explain why baseline reading is disabled. No package is needed and no change is staged/saved. Canonical URL, originating tab, explicit practice confirmation, concurrency lock and save approvals remain enforced.
+
+Added coverage invokes the actual serialized readAssignedLesson function in an isolated JavaScript context with a denied authenticated GET response. It verifies the transport returns the actionable sign-in/permissions error, the adjacent status retains it, a report can download without any capture, and no package/job/receipt or write exists. This is simulated injected-function verification, not browser/live acceptance. All 175 regression checks pass; package graph remains valid.
+
+Minimum user action: close the old reusable screen, reload the unpacked extension, open a fresh reusable screen from https://levelbuilder-studio.code.org/lessons/8898984/edit, verify the nearby Companion 0.10.5 label, confirm practice permission, leave package empty and click Read baseline only and download report. The adjacent message must now show reading or an exact blocker. Use Download baseline report there if needed. Read the resulting private reviewed-transfer-*.json locally before proposing scoped live tests. Do not load the old full package or click save/cleanup. Accepted lesson 8898985 remains untouched. No new live access was available during this fix.
+
+Recorded in local commit titled Make baseline progress and early errors visible without a package. No push or automation revision change. Prior baseline commit a4fdf68; delivery commit 8f41284. Current full automatic live acceptance and live cleanup remain unverified.
+
 # Selected practice baseline preparation — companion 0.10.4
 
 The user selected https://levelbuilder-studio.code.org/lessons/8898984/edit for reusable companion verification. This is distinct from accepted lesson 8898985. Selection authorizes read/preparation only, not clearing, saving or cleanup. Preserve all current content and inspect a fresh baseline before choosing a scoped package. Do not load the old full AI Lab package by default; unit duplicate-level checks and existing mappings must inform any eventual test proposal.

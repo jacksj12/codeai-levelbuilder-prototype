@@ -13,7 +13,7 @@ npm start
 
 Open [Lesson workspace](http://127.0.0.1:4316) or [Transfer demo](http://127.0.0.1:4316/workflow.html). If occupied, set `$env:PORT='43834'` before `npm start` and use the printed address. Verify that startup serves this saved checkout's `prototype/dist`. The separate Documents/ChatGPT project folder is an older backup, not the build destination. Browser storage is separate for each hostname and port.
 
-From `prototype`, run `node --test --test-isolation=none`. The latest delivery check passes **174 tests**. Five controller checks exercise the real transfer-screen handlers with a minimal DOM: broader preparation/save/reload/recheck, storage failure, failed durable attempt storage, reload after storage fails following dispatch, and confirmed read-only baseline export for a selected destination. A package check resolves the local dependency graph from the extension/demo entry points and checks the manifest and unarmed default mode. They are controller simulations, not browser or live acceptance.
+From `prototype`, run `node --test --test-isolation=none`. The latest delivery check passes **175 tests**. Six controller checks exercise the real transfer-screen handlers with a minimal DOM: broader preparation/save/reload/recheck, storage failure, failed durable attempt storage, reload after storage fails following dispatch, confirmed read-only baseline export for a selected destination, and real serialized saved-reader errors before any capture. A package check resolves the local dependency graph from the extension/demo entry points and checks the manifest and unarmed default mode. They are controller simulations, not browser or live acceptance.
 
 ## First use: review and export
 
@@ -41,7 +41,7 @@ Optional **Repeat-test cleanup** separately reviews only receipt-owned level-lin
 
 ## Native companion: current scope
 
-See [installation and recovery](browser-fill/README.md). Load the parent `prototype` folder as an unpacked Edge/Chrome extension. The current manifest is **0.10.4**; reload the installed extension after updating the checkout. No extra host permissions were introduced.
+See [installation and recovery](browser-fill/README.md). Load the parent `prototype` folder as an unpacked Edge/Chrome extension. The current manifest is **0.10.5**; reload the installed extension after updating the checkout. No extra host permissions were introduced.
 
 Before choosing a package, confirm the exact practice destination and choose **Read baseline only and download report**. This requires no package, captures fresh saved data and the open editor, and performs no staging, level-usage check or save. Keep the private downloaded report so the test package can be scoped to current content. Stale or unsaved content is reported without overwriting it.
 

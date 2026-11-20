@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {readTransferRecord} from '../dist/transfer-storage.mjs';
 import {createDemo} from '../dist/demo-transfer.mjs';
+import vm from 'node:vm';
 
 // Exercise the real screen handlers with a minimal DOM. These are controller
 // checks, not browser rendering or authenticated native acceptance.
@@ -90,6 +91,7 @@ test('selected native baseline export needs no package and performs only confirm
  demo.server.id=destination.id;demo.editor.saved.id=destination.id;demo.editor.destination=destination;demo.editor.protection.bootstrap.id=destination.id;
  const calls=[];let currentURL=destination.url;
  const ui=await load(store,run,{location:new URL('chrome-extension://test/browser-fill/workflow.html?run='+run+'#33'),chrome:{
+  runtime:{getManifest:()=>({version:'0.10.5'})},
   tabs:{get:async id=>{assert.equal(id,33);return {id,url:currentURL,discarded:false};}},
   scripting:{executeScript:async({target,func,args})=>{
    assert.equal(target.tabId,33);const request=JSON.parse(args[0]);calls.push(request);
@@ -106,4 +108,31 @@ test('selected native baseline export needs no package and performs only confirm
   assert.match(ui.get('status').textContent,/No staging or save/);
   currentURL='https://levelbuilder-studio.code.org/lessons/8898985/edit';await ui.get('read-baseline').onclick();assert.equal(calls.length,2);assert.match(ui.get('status').textContent,/moved/);
  }finally{ui.restore();}
+});
+
+test('real serialized saved-reader errors remain visible beside baseline control and export without a capture',async()=>{
+ const store=storage(),run='native-reader-error',editorURL='https://levelbuilder-studio.code.org/lessons/8898984/edit';
+ let injections=0,release;
+ const waiting=new Promise(resolve=>{release=resolve;});
+ const ui=await load(store,run,{location:new URL('chrome-extension://test/browser-fill/workflow.html?run='+run+'#33'),chrome:{
+  runtime:{getManifest:()=>({version:'0.10.5'})},tabs:{get:async()=>({id:33,url:editorURL,discarded:false})},
+  scripting:{executeScript:async({func,args})=>{
+   injections++;assert.equal(func.name,'readAssignedLesson');assert.equal(JSON.parse(args[0]).action,'read');
+   await waiting;
+   const result=await vm.runInNewContext('('+func.toString()+')(request)',{request:args[0],location:new URL(editorURL),
+    fetch:async(url,options)=>{assert.equal(url,'/lessons/8898984/edit');assert.equal(options.method,'GET');return {ok:false,status:403};}});
+   return [{result}];
+  }}
+ }});
+ try{
+  assert.match(ui.get('baseline-status').textContent,/0.10.5/);ui.get('practice').checked=true;
+  const pending=ui.get('read-baseline').onclick();
+  assert.match(ui.get('baseline-status').textContent,/Checking practice/);assert.equal(ui.get('read-baseline').textContent,'Reading baseline…');
+  release();await pending;
+  assert.equal(injections,1);assert.match(ui.get('baseline-status').textContent,/sign-in and permissions/);
+  assert.equal(ui.get('read-baseline').disabled,false);assert.equal(ui.get('download-baseline').disabled,false);assert.ok(ui.downloads.length);
+  const state=readTransferRecord(store,'reviewed-transfer-session-'+run);
+  assert.equal(state.pkg,undefined);assert.equal(state.job,undefined);assert.equal(state.receipt,undefined);assert.equal(state.checkpoint,undefined);
+  assert.match(state.preparationError,/sign-in/);assert.equal(state.destination.id,8898984);
+ }finally{release();ui.restore();}
 });

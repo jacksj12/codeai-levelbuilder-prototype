@@ -23,10 +23,13 @@ export function assertCleanSavedBaseline(editor,saved){
 }
 
 export async function readTransferBaseline(io){
+ io.onProgress?.('Reading fresh saved lesson data…');
  const fresh=await io.readSaved();
+ io.onProgress?.('Reading the open editor without changing it…');
  const editor=await io.bridge({action:'read'});
  await io.checkpoint({status:'baseline-read',initialCapture:editor,freshSaved:fresh.lesson,stagingStarted:false});
  if(canonical(editor.saved)!==canonical(fresh.lesson))throw Error('The open editor has an older saved baseline. Preserve any unsaved edits, then reopen the editor and compare again.');
+ io.onProgress?.('Baseline captured. Checking for unsaved differences…');
  assertCleanSavedBaseline(editor,fresh.lesson);
  return {fresh,editor};
 }

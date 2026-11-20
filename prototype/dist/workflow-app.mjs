@@ -13,13 +13,13 @@ const $=id=>document.getElementById(id),native=location.protocol==='chrome-exten
 const url=new URL(location.href);let runId=url.searchParams.get('run');
 if(!runId){runId=crypto.randomUUID();url.searchParams.set('run',runId);history.replaceState(null,'',url);}
 const key='reviewed-transfer-session-'+runId;
-let state={mode:native?'native':'demo',tabId:Number(location.hash.slice(1))},busy=false,io,startupError='',evidenceError='';
+let state={mode:native?'native':'demo',tabId:Number(location.hash.slice(1))},busy=false,baselineReading=false,io,startupError='',evidenceError='';
 try{state=readTransferRecord(localStorage,key)||state;if(state.mode!==(native?'native':'demo'))throw Error('This run belongs to a different mode. Reopen it in its original browser context.');}catch(error){startupError=error.message;state={mode:native?'native':'demo',tabId:Number(location.hash.slice(1))};}
 function persistRecord(recordKey,value){
  try{writeTransferRecord(localStorage,recordKey,value);}catch(error){evidenceError=error.message;throw error;}
 }
 const persist=()=>persistRecord(key,state);
-const status=message=>{$('status').textContent=message;};
+const status=message=>{$('status').textContent=message;if(baselineReading)$('baseline-status').textContent=message;};
 const el=(tag,text,parent)=>{const n=document.createElement(tag);n.textContent=text;parent.append(n);return n;};
 function progress(step){for(let i=1;i<=4;i++){const node=$('step-'+i);node.classList.toggle('active',i===step);if(i===step)node.setAttribute('aria-current','step');else node.removeAttribute('aria-current');}}
 function updateReviewWindow(){
@@ -43,11 +43,15 @@ function render(){
  $('load-demo').hidden=!!state.demo;$('load-teaching-demo').hidden=!!state.demo;$('load-structure-demo').hidden=!!state.demo;$('new-demo').hidden=!state.demo;
  $('prepare').disabled=busy||!!state.receipt||!!state.needsRecovery;
  $('read-baseline').disabled=busy||!!state.job||!!state.receipt||!!state.needsRecovery;
+ $('read-baseline').textContent=baselineReading?'Reading baseline…':'Read baseline only and download report';
+ $('read-baseline').setAttribute('aria-busy',String(baselineReading));
+ if(native&&!baselineReading&&(state.job||state.receipt||state.needsRecovery))$('baseline-status').textContent='This run retains a review, save attempt, or staging recovery. Open a fresh reusable screen from the practice editor to read a new baseline without replacing this evidence.';
+ $('download-baseline').disabled=busy||!state.checkpoint&&!state.preparationError;
  $('review-actions').hidden=!state.job||!!state.receipt||!!state.needsRecovery;
  $('save').disabled=busy||!$('approve').checked||!state.job;
  $('check').hidden=!state.receipt?.attempted||!!state.cleanupReceipt?.attempted;$('check').disabled=busy;
  $('recover').hidden=!state.needsRecovery||!!state.receipt?.attempted;$('recover').disabled=busy;
- $('download').disabled=!state.job&&!state.checkpoint;
+ $('download').disabled=!state.job&&!state.checkpoint&&!state.preparationError;
  $('new-demo').disabled=busy;
  for(const id of ['load-demo','load-teaching-demo','load-structure-demo','package-file','destination','practice'])$(id).disabled=busy||native&&!!state.job||!!state.needsRecovery;
  $('changes').replaceChildren();
@@ -99,6 +103,7 @@ function render(){
  if(evidenceError){
   for(const control of document.querySelectorAll('button,input'))control.disabled=true;
   $('download').disabled=false;
+  $('download-baseline').disabled=false;
   status(evidenceError+' Download the current run report before reloading this same run.');
   $('status').setAttribute('role','alert');
  }
@@ -123,11 +128,12 @@ async function makeIO(){
   persist:async(digest,receipt)=>{if(receipt.kind==='test-link-cleanup-receipt')state.cleanupReceipt=receipt;else state.receipt=receipt;persistRecord(prefix+digest,receipt);persist();},
   checkpoint:async point=>{state.checkpoint=point;state.needsRecovery=point.stage?.restored===false;persist();$('download').disabled=false;},loadCheckpoint:async()=>state.checkpoint};
 }
-async function run(action){
- if(busy||startupError||evidenceError)return;busy=true;render();
+async function run(action,{baseline=false}={}){
+ if(busy||startupError||evidenceError){if(baseline)$('baseline-status').textContent=evidenceError||startupError||'Another operation is running. Wait for it to finish.';return;}
+ busy=true;baselineReading=baseline;if(baseline)status('Checking practice confirmation and access to the selected editor…');render();
  try{await navigator.locks.request(native?'lesson-studio-native-verification':key,{ifAvailable:true},async lock=>{if(!lock)throw Error('Another run is using this editor. Wait for it to finish.');await action();});}
- catch(error){state.preparationError=error.message;try{persist();}catch{/* Keep the in-memory report available when storage is unavailable. */}status(evidenceError||error.message);if(state.checkpoint||state.receipt||evidenceError)downloadReport();}
- finally{busy=false;render();}
+ catch(error){state.preparationError=error.message;try{persist();}catch{/* Keep the in-memory report available when storage is unavailable. */}status(evidenceError||error.message);if(baseline||state.checkpoint||state.receipt||evidenceError)downloadReport();}
+ finally{busy=false;baselineReading=false;render();}
 }
 $('load-demo').onclick=()=>run(async()=>{
  const source=await(await fetch('fixture.json')).json();state.demo=createDemo(source);state.pkg=state.demo.pkg;state.destination=state.demo.destination;persist();io=await makeIO();status('Demo lesson loaded. Read the synthetic destination to review the four missing links.');
@@ -148,8 +154,8 @@ $('read-baseline').onclick=()=>run(async()=>{
  if(!native||state.job||state.receipt||state.needsRecovery)throw Error('Start a fresh native transfer run before reading a baseline.');
  state.destination=selectDestination($('destination').value,$('practice').checked);state.practiceConfirmed=true;persist();
  io=await makeIO();await readTransferBaseline(io);delete state.preparationError;persist();downloadReport();
- status('Fresh baseline read and report downloaded. No staging or save was attempted. Level mappings and unit conflicts have not been checked.');
-});
+ status('Fresh baseline read. Report download requested; if it did not appear, use Download baseline report below. No staging or save was attempted. Level mappings and unit conflicts have not been checked.');
+},{baseline:true});
 async function prepareReview(){
  const ownTab=native?await chrome.tabs.getCurrent():null;
  try{
@@ -176,6 +182,7 @@ $('recover').onclick=()=>run(async()=>{
 });
 function downloadReport(){const blob=URL.createObjectURL(new Blob([JSON.stringify({...state,notice:native?'Private transfer evidence: retain locally.':'SIMULATED DEMO — not live save evidence.'},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=blob;a.download=(native?'reviewed-transfer-':'demo-transfer-')+runId+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(blob),1000);}
 $('download').onclick=downloadReport;
+$('download-baseline').onclick=downloadReport;
 function renderCleanup(){
  const source=state.cleanupSource||state.receipt,review=state.cleanupReview,receipt=state.cleanupReceipt;
  $('prepare-cleanup').disabled=busy||source?.status!=='saved-and-verified'||!!receipt?.attempted;
@@ -218,6 +225,7 @@ if(native){$('demo-controls').hidden=true;$('native-controls').hidden=false;$('w
 else{$('save').textContent='Approve and simulate save';$('approve').parentElement.lastChild.textContent=' I reviewed these exact changes and approve the simulated save to this demo destination.';}
 try{if(!startupError){render();if(state.cleanupReceipt?.attempted)status('Cleanup run restored. Recheck cleanup to read the current saved result without resending.');else if(state.receipt)status('Retained run restored. You can check the saved result without sending again.');}}catch{startupError='Saved transfer data is incomplete or incompatible. The original data has been retained. Transfer is paused; preserve this run before recovery.';}
 if(startupError){status(startupError);$('status').setAttribute('role','alert');for(const control of document.querySelectorAll('button,input'))control.disabled=true;}
+if(native){if(startupError)$('baseline-status').textContent=startupError;else if(!state.job&&!state.receipt&&!state.needsRecovery)$('baseline-status').textContent='Companion '+chrome.runtime.getManifest().version+' · '+(state.preparationError||'Confirm the practice lesson, then read its baseline. No package is needed.');}
 
 
 if(!startupError){setInterval(()=>{if(!evidenceError)updateReviewWindow();},15000);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!evidenceError)updateReviewWindow();});}
