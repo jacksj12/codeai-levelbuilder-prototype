@@ -8,3 +8,7 @@ Thumbs.db
 coverage/
 lesson-review-package.json
 levelbuilder-api-comparison.json
+
+# Private locally approved curriculum used only by unsaved rehearsal.
+prototype/browser-fill/accepted-rehearsal.json
+prototype/browser-fill/local-save-*.json

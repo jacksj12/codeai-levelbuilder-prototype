@@ -1,4 +1,4 @@
-# Browser-fill acceptance test — proposed, not run
+# Browser-fill acceptance — status and limits
 
 Input: the user's latest approved review package for **Lesson 16: AI Lab**. Use the approved package, including user edits, rather than regenerating from the fixture.
 
@@ -21,7 +21,15 @@ Destination: only **Julian Playground – ChatGPT**, the assigned practice lesso
 
 All content checks pass, every required item is accounted for, and no remote save has occurred. Unsupported fields or unresolved resource/level mappings mean **incomplete**, not passed. Human review of the populated editor is required before separately authorizing a save.
 
-## Current result
+## Local reusable-transfer milestone
+
+The new comparison and local DOM rehearsal are tested separately in [TRANSFER-REHEARSAL-ACCEPTANCE.md](TRANSFER-REHEARSAL-ACCEPTANCE.md). Bounded interruption, reload/resume, duplicate-free reruns and outside-edit detection were exercised in the local harness. These results do not establish native Level Builder repeat-run or interruption acceptance. Native staging remains disabled, the new DOM-capture extension has not been installed/live authenticated-tested, and the accepted saved lesson was not changed.
+
+## Native existing-field adapter follow-up
+
+See [NATIVE-SCALAR-ACCEPTANCE.md](NATIVE-SCALAR-ACCEPTANCE.md). A restricted native adapter now supports reviewed existing text, whole-minute timing and remarks fields. Its native-shaped local fixture passed seven mutations, interruption/resume and no-op reruns with Save controls untouched. Separately, agent-operated native sandbox UI checks temporarily changed and restored title, guidance, timing and remarks; a reload confirmed all non-secret editor control values unchanged. The user installed the companion in Edge; a packaged title write and the initial two-field automatic resume/rerun/restoration suite passed. The expanded twelve-field and five-callout structural engineering suites passed the local native-shaped fixture and await their combined live Edge check. The new reviewed native runner supports append-only sections and five callout types; its combined live verification is recorded in the native adapter results. New activities, objective edits, existing-callout edits, resource/level associations and other unsupported operations still block the whole run. This is not full browser-fill acceptance.
+
+## Historical accepted native run
 
 **Subsequent authorized save succeeded.** The user explicitly approved saving the completed lesson. Save and Close returned to the assigned lesson page, which displayed Lesson 16: AI Lab, 45 minutes, three activities, ten section headings, all six callouts, all three resource links grouped under teacher/student audiences, and level 1 plus assessment levels 2–4. Objectives appeared alphabetically without text loss. The browser-fill-and-save path has now been exercised once through agent-operated UI actions. Repeat-run duplication prevention and interruption recovery remain untested; a packaged one-click fill feature is still not implemented. Earlier unsaved-state notes below describe the prior review checkpoint.
 

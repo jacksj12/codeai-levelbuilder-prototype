@@ -44,5 +44,5 @@ test('connector makes only an authenticated read and rejects unexpected returned
  let returned=snapshot;
  globalThis.DOMParser=class{parseFromString(){return {querySelector:()=>({getAttribute:()=>JSON.stringify(returned)})};}};
  globalThis.fetch=async(url,options)=>{assert.equal(url,'/lessons/8898985/edit');assert.equal(options.method,'GET');assert.equal(options.credentials,'same-origin');assert.equal(options.redirect,'error');return {ok:true,text:async()=>'<html></html>'};};
- try{assert.deepEqual(await readAssignedLesson(),snapshot);returned={...snapshot,id:2};await assert.rejects(readAssignedLesson,/does not match/);}finally{for(const [key,value]of Object.entries(originals)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}
+ try{assert.deepEqual(await readAssignedLesson(),snapshot);const raw=await readAssignedLesson(JSON.stringify({returnRaw:true,transportErrors:true}));assert.deepEqual(raw.lesson,snapshot);assert.equal(raw.originalLessonJson,JSON.stringify(snapshot));returned={...snapshot,id:2};await assert.rejects(readAssignedLesson,/does not match/);assert.match((await readAssignedLesson({transportErrors:true})).nativeBridgeError,/does not match/);}finally{for(const [key,value]of Object.entries(originals)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}
 });

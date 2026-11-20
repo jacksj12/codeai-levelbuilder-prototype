@@ -43,6 +43,18 @@ export function generate(source){
  if(!source.objectives?.length)warnings.push('No objectives supplied.');if(!source.resources?.length)warnings.push('No resource records supplied.');
  return {schemaVersion:1,title:source.title,course:source.course||'',frontMatter:{teacherOverview:source.teacherOverview||'',studentOverview:source.studentOverview||'',objectives:source.objectives||[],preparation:source.preparation||'',vocabulary:source.vocabulary||[],purpose:source.purpose||'',assessmentOpportunities:''},resources:structuredClone(source.resources||[]),activities,sections,duration:activities.reduce((n,a)=>n+a.duration,0),warnings};
 }
+export function objectivesEqual(a,b){
+ return Array.isArray(a)&&Array.isArray(b)&&JSON.stringify([...a].sort())===JSON.stringify([...b].sort());
+}
+export function reconcileObjectives(base,current,incoming){
+ if(objectivesEqual(current,incoming))return {value:current,status:'unchanged'};
+ if(objectivesEqual(base,incoming))return {value:current,status:'kept'};
+ // Count occurrences: losing a duplicate still requires an explicit decision.
+ const remaining=[...(incoming||[])];
+ for(const objective of base||[]){const i=remaining.indexOf(objective);if(i<0)return {value:current,status:'conflict'};remaining.splice(i,1);}
+ if(objectivesEqual(base,current))return {value:incoming,status:'updated'};
+ return {value:current,status:'conflict'};
+}
 export function reconcile(base,current,incoming){
  const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
  if(eq(current,incoming))return {value:current,status:'unchanged'};
@@ -55,6 +67,6 @@ export function reconcile(base,current,incoming){
 export function exportMarkdown(p){
  const f=p.frontMatter;let out=`# ${p.title}\n\nReview export — not a Level Builder import or published lesson.\n\n## Teacher overview\n${f.teacherOverview}\n\n## Student overview\n${f.studentOverview}\n\n## Objectives\n${f.objectives.map(o=>'- '+o).join('\n')}\n\n## Preparation\n${f.preparation}\n\n## Vocabulary\n${f.vocabulary.length?f.vocabulary.map(v=>typeof v==='string'?'- '+v:`- ${v.word}: ${v.definition}`).join('\n'):'None supplied'}\n\n## Purpose\n${f.purpose||'Not supplied'}\n\n## Assessment opportunities\n${f.assessmentOpportunities||'Not supplied'}\n\n## Resources\n`;
  for(const r of p.resources)out+=`- ${r.name} | ${r.type} | ${r.audience} | ${r.url}\n`;
- out+='\n## Teaching Guide\n';for(const a of p.activities){out+=`\n### ${a.title} (${a.duration} minutes)\n`;for(const s of p.sections.filter(s=>s.activityId===a.id)){out+=`\n#### ${s.title||'Untitled section'}${s.duration?` (${s.duration} minutes)`:''}\nSource slide: ${s.slide}; Remarks: ${s.remarks?'yes':'no'}\n\n${s.body}\n`;for(const c of s.callouts)out+=`\n**${c.type}**\n${c.body}\n`;if(s.progression)out+=`\nProgression: ${s.progression.title}\n${s.progression.levels.map(l=>`- Level ${l.number}: ${l.key}`).join('\n')}\n`;}}
+ out+='\n## Teaching Guide\n';for(const a of p.activities){out+=`\n### ${a.title} (${a.duration} minutes)\n`;for(const s of p.sections.filter(s=>s.activityId===a.id)){out+=`\n#### ${s.title||'Untitled section'}${s.duration?` (${s.duration} minutes)`:''}\n${s.origin==='local'?'Source: added locally':'Source slide: '+s.slide}; Remarks: ${s.remarks?'yes':'no'}\n\n${s.body}\n`;for(const c of s.callouts)out+=`\n**${c.type}**\n${c.body}\n`;if(s.progression)out+=`\nProgression: ${s.progression.title}\n${s.progression.levels.map(l=>`- Level ${l.number}: ${l.key}${l.url?' | '+l.url:''}${l.assessment?' | Assessment':''}${l.mappingStatus==='unverified'?' | Destination verification needed':''}`).join('\n')}\n`;}}
  return out;
 }

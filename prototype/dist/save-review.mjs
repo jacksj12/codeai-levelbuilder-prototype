@@ -1,0 +1,145 @@
+import {clone,canonical,digest,validatePlan,DESTINATION_ID} from './transfer-core.mjs';
+import {SANDBOX} from './core.mjs';
+import {normalizeNativeCapture} from './transfer-native.mjs';
+
+const ROOT_SETTINGS=['lockable','hasLessonPlan','creativeCommonsLicense','background','assessment','unplugged'];
+const ROOT_TEXT=['name','overview','studentOverview','assessmentOpportunities','purpose','preparation'];
+function assert(condition,message){if(!condition)throw Error(message);}
+function records(value,label){assert(Array.isArray(value),'The saved '+label+' collection is missing.');return value;}
+function keyList(value,label){const list=records(value,label).map(r=>{assert(typeof r.key==='string'&&r.key,'A saved '+label+' key is missing.');return r.key;});assert(new Set(list).size===list.length,'Saved '+label+' keys are ambiguous.');return list;}
+function sourceSection(root,path){return root.activities[path[1]]?.activitySections[path[3]];}
+function replaceGroup(root,path,source){
+ const section=sourceSection(root,path);assert(section,'A destination section is missing.');
+ section.scriptLevels=clone(source.scriptLevels);section.progressionName=source.progressionName;
+}
+function comparableLesson(lesson){const value=clone(lesson);value.frontMatter.objectives.sort();return value;}
+
+// Pure preparation only. No networking, CSRF access, Save click or writer.
+export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),originalLessonJson}={}){
+ assert(rehearsal?.status==='passed-and-restored'&&rehearsal.checksPassed===true&&rehearsal.restored===true,'A completed and restored accepted-package rehearsal is required.');
+ const plan=rehearsal.plan;await validatePlan(plan);
+ assert(plan.destination.id===DESTINATION_ID&&plan.destination.url===SANDBOX,'The reviewed save is not for the assigned playground.');
+ const initial=rehearsal.initialCapture,staged=rehearsal.stagedCapture;
+ assert(initial?.saved?.id===DESTINATION_ID&&staged?.saved?.id===DESTINATION_ID&&freshSaved?.id===DESTINATION_ID,'The saved lesson identity does not match the assigned playground.');
+ assert(canonical(freshSaved)===canonical(initial.saved)&&canonical(staged.saved)===canonical(initial.saved),'Saved content changed after the rehearsal. Read and review it again; no save was prepared.');
+ assert(typeof originalLessonJson==='string'&&canonical(JSON.parse(originalLessonJson))===canonical(freshSaved),'The exact original server snapshot is required for its conflict check.');
+ assert(canonical(initial)===canonical(rehearsal.finalCapture),'The rehearsal did not restore its complete original capture.');
+ const normalized=normalizeNativeCapture(staged);assert(!normalized.blockers.length,normalized.blockers.join(' '));
+ assert(canonical(normalized.lesson)===canonical(plan.expectedLesson),'The staged content does not match its reviewed transfer plan.');
+ assert(plan.operations.length>0,'There are no reviewed changes to save.');
+ const projection=clone(staged),candidate=clone(freshSaved),changes=[];
+ for(const op of plan.operations){
+  const p=op.path;
+  assert(op.kind==='set'&&p.length===5&&p[0]==='activities'&&p[2]==='sections'&&p[4]==='progression'&&op.before===null,'This save-review version only supports the verified missing-level additions. Other changes need their own save mapping.');
+  const before=sourceSection(initial.live,p),after=sourceSection(staged.live,p),saved=sourceSection(candidate,p);
+  assert(before&&after&&saved&&before.id===saved.id&&after.id===saved.id,'A destination activity-section identity changed.');
+  assert(!records(before.scriptLevels,'original level links').length&&!records(saved.scriptLevels,'saved level links').length,'Replacing an existing saved progression is not supported.');
+  assert(after.scriptLevels.length===op.after.levels.length,'The reviewed level-link count changed.');
+  for(const [i,sl]of after.scriptLevels.entries()){
+   const level=sl.levels?.[0];assert(sl.id==null,'A new native association unexpectedly carries a persisted record ID.');
+   assert(sl.levels?.length===1&&level?.id!=null&&level.name===op.after.levels[i].key&&Boolean(sl.assessment)===op.after.levels[i].assessment,'The native level mapping or assessment flag changed.');
+   assert(Number.isInteger(sl.activitySectionPosition)&&sl.activitySectionPosition===i+1,'The native per-section level ordering is incomplete.');
+  }
+  replaceGroup(projection.live,p,before);
+  const protectedBefore=initial.protection.unmanagedActivities[p[1]].activitySections[p[3]],protectedAfter=projection.protection.unmanagedActivities[p[1]].activitySections[p[3]];
+  protectedAfter.scriptLevels=clone(protectedBefore.scriptLevels);protectedAfter.progressionName=protectedBefore.progressionName;
+  // Begin with the full saved destination and replace only the approved group.
+  replaceGroup(candidate,p,after);
+  changes.push({activity:freshSaved.activities[p[1]].name,section:saved.name,sectionId:saved.id,progression:op.after.title,
+   addLevels:after.scriptLevels.map(sl=>({name:sl.levels[0].name,levelId:sl.levels[0].id,assessment:Boolean(sl.assessment)}))});
+ }
+ assert(canonical(projection)===canonical(initial),'Unreviewed native content or settings changed during staging.');
+ const payload={};
+ for(const key of [...ROOT_TEXT,...ROOT_SETTINGS]){assert(Object.prototype.hasOwnProperty.call(freshSaved,key),'Saved field '+key+' is missing.');payload[key]=clone(freshSaved[key]);}
+ const standards=records(freshSaved.standards,'standards'),opportunity=records(freshSaved.opportunityStandards,'opportunity standards'),expressions=records(freshSaved.programmingExpressions,'code definitions');
+ for(const item of [...standards,...opportunity])assert(typeof item.frameworkShortcode==='string'&&typeof item.shortcode==='string','A saved standard mapping is incomplete.');
+ for(const item of expressions)assert(typeof item.programmingEnvironmentName==='string'&&typeof item.key==='string','A saved code-definition mapping is incomplete.');
+ payload.objectives=JSON.stringify(records(freshSaved.objectives,'objectives'));
+ payload.activities=JSON.stringify(candidate.activities);
+ payload.resources=JSON.stringify(keyList(freshSaved.resources,'resources'));
+ payload.vocabularies=JSON.stringify(keyList(freshSaved.vocabularies,'vocabulary'));
+ payload.programmingExpressions=JSON.stringify(expressions);payload.standards=JSON.stringify(standards);payload.opportunityStandards=JSON.stringify(opportunity);
+ payload.jitPlConceptIds=JSON.stringify(records(freshSaved.jitPlConcepts,'teaching concepts').map(c=>{assert(Number.isSafeInteger(c.id),'A saved teaching-concept identity is missing.');return c.id;}));
+ assert(freshSaved.announcements===null||Array.isArray(freshSaved.announcements),'Saved announcements are incomplete.');payload.announcements=JSON.stringify(freshSaved.announcements);
+ payload.originalLessonData=originalLessonJson;
+ const sections=normalized.lesson.activities.flatMap(a=>a.sections),levels=sections.flatMap(s=>s.progression?.levels||[]);
+ const expectedCounts={activities:normalized.lesson.activities.length,sections:sections.length,callouts:sections.reduce((n,s)=>n+s.callouts.length,0),resources:normalized.lesson.resources.length,levels:levels.length,assessments:levels.filter(l=>l.assessment).length};
+ const review={schemaVersion:1,kind:'native-save-review',status:'ready-for-review',createdAt:now,expiresAt:now+10*60*1000,
+  destination:{id:DESTINATION_ID,url:SANDBOX},remoteWrites:false,saveAllowed:false,requiresUserApproval:true,requiresRestaging:true,
+  baselineDigest:await digest(freshSaved),stagedDigest:await digest(staged),rehearsalPlanId:plan.id,changes,
+  request:{method:'PUT',url:'https://levelbuilder-studio.code.org/lessons/'+DESTINATION_ID,contentType:'application/json;charset=UTF-8',body:JSON.stringify(payload)},
+  baseline:clone(freshSaved),baselineNativeProtection:clone(initial.protection),expectedLesson:clone(plan.expectedLesson),expectedCounts,
+  preserved:{activityIds:freshSaved.activities.map(a=>a.id),sectionIds:freshSaved.activities.flatMap(a=>a.activitySections.map(s=>s.id)),resourceKeys:JSON.parse(payload.resources),vocabularyKeys:JSON.parse(payload.vocabularies)},
+  limitation:'Dry run only. The deployed write response has not been exercised. Restage, recheck saved content, and obtain approval for this exact review before any save.'};
+ review.id=await digest(review);return review;
+}
+
+export async function validateSaveReview(review,{freshSaved,now=Date.now(),checkExpiry=true}={}){
+ assert(review?.kind==='native-save-review'&&review.saveAllowed===false&&review.remoteWrites===false,'Invalid dry-run save review.');
+ const copy=clone(review);delete copy.id;assert(await digest(copy)===review.id,'The save review changed. Prepare it again.');
+ assert(review.destination.id===DESTINATION_ID&&review.destination.url===SANDBOX&&review.request.method==='PUT'&&review.request.url==='https://levelbuilder-studio.code.org/lessons/'+DESTINATION_ID,'The save destination changed.');
+ assert(!checkExpiry||now<=review.expiresAt,'This save review expired. Read and review the lesson again.');
+ if(freshSaved)assert(freshSaved.id===DESTINATION_ID&&await digest(freshSaved)===review.baselineDigest,'Saved content changed after review. Do not save or retry the old request.');
+ return review;
+}
+
+export async function saveRequestDigest(review){
+ const request=review.request||review,payload=JSON.parse(request.body);
+ for(const key of ['objectives','activities','resources','vocabularies','programmingExpressions','standards','opportunityStandards','jitPlConceptIds','announcements','originalLessonData']){
+  assert(typeof payload[key]==='string','Incomplete reviewed request field '+key+'.');payload[key]=JSON.parse(payload[key]);
+ }
+ return digest({method:request.method,url:request.url,contentType:request.contentType,payload});
+}
+
+export async function validateStagedSaveReview(review,capture){
+ await validateSaveReview(review);
+ assert(capture?.saved?.id===DESTINATION_ID&&await digest(capture.saved)===review.baselineDigest,'The staged editor baseline changed.');
+ const normalized=normalizeNativeCapture(capture);assert(!normalized.blockers.length,normalized.blockers.join(' '));
+ assert(canonical(comparableLesson(normalized.lesson))===canonical(comparableLesson(review.expectedLesson)),'The current staged editor differs from the approved result.');
+ const protection=clone(capture.protection),requested=JSON.parse(JSON.parse(review.request.body).activities);
+ for(const change of review.changes){
+  const ai=capture.live.activities.findIndex(a=>a.activitySections.some(s=>s.id===change.sectionId));
+  assert(ai>=0,'A reviewed section is missing from the current editor.');
+  const si=capture.live.activities[ai].activitySections.findIndex(s=>s.id===change.sectionId),section=capture.live.activities[ai].activitySections[si];
+  const expected=requested.flatMap(a=>a.activitySections).find(s=>s.id===change.sectionId);
+  assert(section.scriptLevels.length===expected.scriptLevels.length,'The staged link count changed.');
+  for(const [i,sl]of section.scriptLevels.entries()){
+   const wanted=expected.scriptLevels[i];assert(sl.id==null&&sl.levels?.length===1&&String(sl.levels[0].id)===String(wanted.levels[0].id),'A staged native level identity changed.');
+   for(const key of ['assessment','bonus','challenge','instructor_in_training','show_ai_analysis'])assert(Boolean(sl[key])===Boolean(wanted[key]),'An unreviewed staged level flag changed.');
+   assert(canonical(sl.variants??null)===canonical(wanted.variants??null),'The staged level variants changed.');
+  }
+  const original=review.baselineNativeProtection.unmanagedActivities[ai].activitySections[si];
+  protection.unmanagedActivities[ai].activitySections[si].scriptLevels=clone(original.scriptLevels);protection.unmanagedActivities[ai].activitySections[si].progressionName=original.progressionName;
+ }
+ assert(canonical(protection)===canonical(review.baselineNativeProtection),'Unreviewed settings or native records changed before saving.');
+ return true;
+}
+
+export async function verifySavedReadback(review,saved){
+ await validateSaveReview(review,{checkExpiry:false});
+ const mismatches=[];
+ if(saved?.id!==DESTINATION_ID)return {passed:false,mismatches:['The returned lesson identity is wrong.']};
+ if(!['activities','resources','objectives','vocabularies'].every(key=>Array.isArray(saved[key]))||saved.activities.some(a=>!Array.isArray(a.activitySections)))return {passed:false,mismatches:['The saved response is incomplete; preservation cannot be verified.'],saved:true,saveRetried:false};
+ const capture={schemaVersion:1,kind:'native-dom-capture',destination:review.destination,saved,blockers:[],live:{
+  fields:{title:saved.name,teacherOverview:saved.overview||'',studentOverview:saved.studentOverview||'',purpose:saved.purpose||'',preparation:saved.preparation||'',assessmentOpportunities:saved.assessmentOpportunities||''},
+  activities:saved.activities,objectives:saved.objectives,resources:saved.resources.map(r=>({key:r.key,name:r.name,type:r.type,audience:r.audience,url:r.url})),vocabularies:saved.vocabularies}};
+ const normalized=normalizeNativeCapture(capture);
+ if(normalized.blockers.length)mismatches.push(...normalized.blockers);
+ if(canonical(comparableLesson(normalized.lesson))!==canonical(comparableLesson(review.expectedLesson)))mismatches.push('Saved lesson content, ordering or assessment flags differ from the reviewed result.');
+ const projection=clone(saved),newIds=new Set();
+ for(const change of review.changes){
+  let found;
+  for(const activity of projection.activities||[])for(const section of activity.activitySections||[])if(section.id===change.sectionId)found=section;
+  if(!found){mismatches.push('A reviewed section identity is missing.');continue;}
+  if(found.scriptLevels?.length!==change.addLevels.length)mismatches.push('A saved progression has an unexpected number of levels.');
+  for(const [index,sl]of (found.scriptLevels||[]).entries()){
+   const validId=(typeof sl.id==='number'||typeof sl.id==='string'&&/^\d+$/.test(sl.id))&&Number.isSafeInteger(Number(sl.id))&&Number(sl.id)>0;
+   if(!validId||newIds.has(String(sl.id)))mismatches.push('New saved association identities are missing or duplicated.');else newIds.add(String(sl.id));
+   if(String(sl.levels?.[0]?.id)!==String(change.addLevels[index]?.levelId))mismatches.push('A saved link points to a different level record.');
+  }
+  const original=review.baseline.activities.flatMap(a=>a.activitySections).find(s=>s.id===change.sectionId);found.scriptLevels=clone(original.scriptLevels);found.progressionName=original.progressionName;
+ }
+ if(canonical(projection)!==canonical(review.baseline))mismatches.push('An existing record, setting or association changed outside the reviewed additions.');
+ const passed=mismatches.length===0,baselineUnchanged=canonical(saved)===canonical(review.baseline);
+ return {passed,mismatches:[...new Set(mismatches)],saved:passed?true:baselineUnchanged?false:null,baselineUnchanged,saveRetried:false};
+}
