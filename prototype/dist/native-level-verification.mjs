@@ -1,4 +1,4 @@
-import {appendedSections,inAppendedSection,isSupportedSectionOperation,recoverAppendedSections} from './reviewed-structure.mjs';
+import {appendedActivities,appendedCallouts,inNewActivity,recoverExtraStructure,appendedSections,inAppendedSection,isSupportedSectionOperation,recoverAppendedSections} from './reviewed-structure.mjs';
 import {savedFieldPath,liveFieldPath,fieldAt,putField,restoreFieldProtection} from './reviewed-fields.mjs';
 import {clone,canonical,digest,buildTransferPlan,packageProblems,readPath} from './transfer-core.mjs';
 import {normalizeNativeCapture} from './transfer-native.mjs';
@@ -6,6 +6,7 @@ import {stageNativeTransferPlan,unsupportedNativeTransferActions} from './native
 
 export async function recoverNativeLevelCheck(bridge,previous){
  if(!previous?.initialCapture||!previous.plan)throw Error('The original level rehearsal checkpoint is missing.');
+ if(appendedActivities(previous.plan).length||appendedCallouts(previous.plan).length)return recoverNativeLevelCheck(bridge,await recoverExtraStructure(bridge,previous));
  if(appendedSections(previous.plan).length)return recoverNativeLevelCheck(bridge,await recoverAppendedSections(bridge,previous));
  const initial=previous.initialCapture;let current=await bridge({action:'read'});
  const scalarOps=previous.plan.operations.filter(op=>savedFieldPath(op));
@@ -96,7 +97,7 @@ export async function runAcceptedNativeRehearsal(bridge,pkg,{onProgress=()=>{},o
   const plan=await buildTransferPlan(pkg,snapshot,decisions);result.plan=plan;
   result.blockers=[...plan.blockers,...plan.operations.filter(op=>op.requiresDecision).map(op=>op.label+': existing content differs and needs an explicit keep/replace decision.'),...unsupportedNativeTransferActions(plan).map(op=>op.label+': this change is not supported by native transfer.')];
   if(result.blockers.length)throw Error('Preparation blocked by unresolved items: '+result.blockers.join(' '));
-  if(plan.operations.some(op=>inAppendedSection(op,appendedSections(plan))?!isSupportedSectionOperation(op,appendedSections(plan)):op.path.at(-1)!=='progression'&&!savedFieldPath(op)))throw Error('This rehearsal supports teaching fields, appended sections with callouts, and existing-section level links; callout additions on existing sections and other collections need separate review.');
+  if(plan.operations.some(op=>inNewActivity(op,appendedActivities(plan))||op.kind==='append'&&op.path.length===5&&op.path[4]==='callouts'?false:inAppendedSection(op,appendedSections(plan))?!isSupportedSectionOperation(op,appendedSections(plan)):op.path.at(-1)!=='progression'&&!savedFieldPath(op)))throw Error('This rehearsal supports teaching fields, appended sections with callouts, and existing-section level links; callout additions on existing sections and other collections need separate review.');
   await onCheckpoint(clone({...result,status:'running'}));
   onProgress('Rehearsing proposed teaching fields and level links without saving.');
   const partial=await stageNativeTransferPlan(plan,bridge,{maxOperations:1,onProgress:async report=>{await onCheckpoint(clone({...result,status:'running',reports:[...result.reports,report]}));}});result.reports.push(partial);

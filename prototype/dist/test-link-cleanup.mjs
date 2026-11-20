@@ -11,7 +11,7 @@ export async function planTestLinkCleanup(receipt,freshSaved){
  if(freshSaved?.id!==review.destination.id)throw Error('Cleanup destination differs from the test receipt.');
  const result=clone(freshSaved),removals=[];
  for(const change of reviewedLevelGroups(review)){
-  if(change.newSection){const activity=receipt.readback.activities[change.activityIndex];if(activity.id!==change.activityId)throw Error('The new section activity identity changed.');change.sectionId=activity.activitySections[change.sectionIndex].id;}
+  if(change.newSection){const activity=receipt.readback.activities[change.activityIndex];if(!change.newActivity&&activity.id!==change.activityId)throw Error('The new section activity identity changed.');change.sectionId=activity.activitySections[change.sectionIndex].id;}
   const find=lesson=>lesson.activities.flatMap(a=>a.activitySections).find(s=>s.id===change.sectionId);
   const before=change.newSection?{scriptLevels:[],progressionName:null}:find(review.baseline),recorded=find(receipt.readback),current=find(freshSaved),target=find(result);
   if(!before||!recorded||!current||before.scriptLevels.length)throw Error('Cleanup requires a recorded originally empty progression.');

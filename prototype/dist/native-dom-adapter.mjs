@@ -91,7 +91,7 @@ export async function nativeEditorBridge(request={action:'read'}){
    if(source?.status!=='saved-and-verified'||source.attempted!==true||source.verification?.passed!==true||sourceReview?.destination.id!==destination.id||await fingerprint(sourceCopy)!==sourceReview.id)throw Error('Cleanup ownership evidence is invalid.');
    const freshSaved=JSON.parse(raw),expected=structuredClone(freshSaved),seen=new Set();
    const groups=[...sourceReview.changes,...(sourceReview.sectionAdditions||[]).filter(c=>c.section.scriptLevels.length).map(c=>{
-    const activity=source.readback.activities[c.activityIndex];if(activity.id!==c.activityId)throw Error('Cleanup section activity changed.');
+    const activity=source.readback.activities[c.activityIndex];if(!c.newActivity&&activity.id!==c.activityId)throw Error('Cleanup section activity changed.');
     return {newSection:true,sectionId:activity.activitySections[c.sectionIndex].id,addLevels:c.section.scriptLevels.map(sl=>({levelId:sl.levels[0].id,assessment:sl.assessment}))};
    })];
    if(!Array.isArray(review.removals)||!review.removals.length||review.removals.length!==groups.length)throw Error('Cleanup scope is incomplete.');
@@ -219,6 +219,30 @@ export async function nativeEditorBridge(request={action:'read'}){
   if(after.blockers.length)throw Error(after.blockers.join(' '));
   return request.action==='lookup-levels'?{kind:'native-level-mappings',capture:after,mappings}:after;
  }
+ if(['append-activity','remove-created-activity','remove-created-callout'].includes(request.action)){
+  if(request.mode!=='unsaved-structure-staging')throw Error('Explicit structural mode is required.');
+  const before=read();if(before.blockers.length||await fingerprint(before)!==request.expectedCaptureDigest)throw Error('The editor changed before structural action.');
+  const op=request.operation,p=op?.path,ai=p?.[1],si=p?.[3];let after;
+  const choose=(root,text)=>{const matches=[...root.querySelectorAll('button')].filter(b=>b.getClientRects().length&&b.textContent.trim()===text);if(matches.length!==1)throw Error('Ambiguous '+text+' control.');return matches[0];};
+  const confirm=async title=>{const dialogs=[...document.querySelectorAll('.modal-content')].filter(n=>n.getClientRects().length&&[...n.querySelectorAll('h2')].some(h=>h.closest('.modal-content')===n&&title.test(h.textContent.trim())));if(dialogs.length!==1)throw Error('Structural removal confirmation is ambiguous.');const immediate=read();if(stable(immediate.live)!==stable(before.live)||stable(immediate.saved)!==stable(before.saved)||stable(immediate.protection)!==stable(before.protection))throw Error('Outside edits appeared before structural removal.');checkDeadline();choose(dialogs[0],'Delete').click();await settle();};
+  if(request.action==='append-activity'){
+   const empty={title:'',duration:null,sections:[{title:'',duration:null,body:'',remarks:false,callouts:[],progression:null}]};
+   if(p?.length!==1||p[0]!=='activities'||op.kind!=='append'||op.before?.length!==before.live.activities.length||stable(op.after)!==stable(empty))throw Error('Only a reviewed blank activity may be appended.');
+   const buttons=document.querySelectorAll('button.add-activity');if(buttons.length!==1)throw Error('Activity insertion control is ambiguous.');checkDeadline();buttons[0].dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0,buttons:1}));await settle();after=read();diagnosticCapture=after;
+   const a=after.live.activities.at(-1),section=a?.activitySections?.[0];if(after.live.activities.length!==before.live.activities.length+1||a.id!=null||!/^activity-/.test(a.key||'')||a.name||a.duration||a.activitySections.length!==1||section.id!=null||!/^activitySection-/.test(section.key||'')||section.name||section.description||section.duration||section.remarks||section.tips?.length||section.scriptLevels?.length)throw Error('New native activity is not the expected blank structure.');
+   const projection=structuredClone(after);projection.live.activities.pop();projection.protection.unmanagedActivities.pop();if(stable(projection)!==stable(before))throw Error('Activity insertion changed unrelated content.');
+  }else if(request.action==='remove-created-activity'){
+   const a=before.live.activities[ai],card=document.querySelectorAll('.uitest-activity-card')[ai];if(p?.length!==2||p[0]!=='activities'||ai!==before.live.activities.length-1||!a||a.id!=null||a.key!==op.createdKey||!/^activity-/.test(a.key||''))throw Error('Only the exact owned last unsaved activity can be removed.');
+   const trash=card?.firstElementChild?.querySelectorAll('.fa-trash');if(trash?.length!==1)throw Error('Activity removal control is ambiguous.');checkDeadline();trash[0].dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0,buttons:1}));await settle();await confirm(/^Are you sure you want to remove /);after=read();const expected=structuredClone(before);expected.live.activities.pop();expected.protection.unmanagedActivities.pop();if(stable(expected)!==stable(after))throw Error('Activity removal changed unrelated content.');
+  }else{
+   const ti=p?.[5],section=before.live.activities[ai]?.activitySections[si],tip=section?.tips?.[ti],saved=before.saved.activities[ai]?.activitySections[si];
+   if(p?.length!==6||p[0]!=='activities'||p[2]!=='sections'||p[4]!=='callouts'||!Number.isInteger(ti)||ti<0||ti!==section?.tips.length-1||ti<(saved?.tips?.length||0)||stable(tip)!==stable(op.expectedTip))throw Error('Only the exact appended unsaved callout may be removed.');
+   const area=document.querySelectorAll('.uitest-activity-card')[ai]?.querySelectorAll('textarea')[si],icons=area?.parentElement.querySelectorAll('span[data-tip][data-for] > i');if(icons?.length!==section.tips.length)throw Error('Callout removal controls are ambiguous.');checkDeadline();icons[ti].click();await settle();
+   const dialogs=[...document.querySelectorAll('.modal-content')].filter(n=>n.getClientRects().length&&[...n.querySelectorAll('h2')].some(h=>h.textContent.trim()==='Add Callout'));if(dialogs.length!==1)throw Error('Callout editor did not open uniquely.');const modal=dialogs[0];if(modal.querySelector('select')?.value!==tip.type||modal.querySelector('textarea[name="callout"]')?.value!==tip.markdown)throw Error('Callout removal target changed.');
+   const immediate=read();if(stable(immediate.live)!==stable(before.live)||stable(immediate.saved)!==stable(before.saved))throw Error('Outside edits prevent callout removal.');checkDeadline();choose(modal,'Delete').click();await settle();await confirm(/^Delete Callout\?/);after=read();const expected=structuredClone(before);expected.live.activities[ai].activitySections[si].tips.pop();expected.protection.unmanagedActivities[ai].activitySections[si].tips.pop();if(stable(expected)!==stable(after))throw Error('Callout removal changed unrelated content.');
+  }
+  if(after.blockers.length)throw Error(after.blockers.join(' '));return after;
+ }
  if(['append-section','append-callout','remove-created-section'].includes(request.action)){
   if(request.mode!=='unsaved-structure-staging')throw Error('Structural staging requires its explicit mode.');
   const before=read();if(before.blockers.length)throw Error(before.blockers.join(' '));
@@ -253,7 +277,7 @@ export async function nativeEditorBridge(request={action:'read'}){
     if(modals.length!==1)throw Error('The native Add Callout form did not open uniquely.');
     const modal=modals[0],selects=modal.querySelectorAll('select'),areas=modal.querySelectorAll('textarea[name="callout"]');
     if(selects.length!==1||areas.length!==1)throw Error('Unexpected native callout fields.');
-    checkDeadline();setControl(selects[0],types[callout.type]);setControl(areas[0],callout.body);checkDeadline();choose(modal,'Save and close').click();await settle();after=read();
+    checkDeadline();setControl(selects[0],types[callout.type]);setControl(areas[0],callout.body);const immediate=read();if(stable(immediate.live)!==stable(before.live)||stable(immediate.saved)!==stable(before.saved))throw Error('Outside edits appeared before adding the callout.');checkDeadline();choose(modal,'Save and close').click();await settle();after=read();
     const tips=after.live.activities[ai]?.activitySections[si]?.tips||[],tip=tips.at(-1);
     if(tips.length!==(sections[si].tips||[]).length+1||tip?.type!==types[callout.type]||tip?.markdown!==callout.body)throw Error('Native callout creation readback did not match.');
     const compare=structuredClone(after);compare.live.activities[ai].activitySections[si].tips.pop();compare.protection.unmanagedActivities[ai].activitySections[si].tips.pop();

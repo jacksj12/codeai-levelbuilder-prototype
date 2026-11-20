@@ -44,8 +44,8 @@ test('restaging refuses new-section content or settings outside exact review',as
   const current=clone(good);mutate(current);await assert.rejects(validateStagedSaveReview(job.review,current));
  }
 });
-test('unverified new-section levels and new callouts on existing sections block the complete batch before staging',async()=>{
- for(const mutate of [l=>l.sections.at(-1).progression={title:'Levels',levels:[{key:'Unknown',number:1,assessment:false}]},l=>l.sections[0].callouts.push({type:'Teaching Tip',body:'New callout on old section'})]){
+test('unverified new-section levels block the complete batch before staging',async()=>{
+ for(const mutate of [l=>l.sections.at(-1).progression={title:'Levels',levels:[{key:'Unknown',number:1,assessment:false}]}]){
   const h=harness();mutate(h.state.pkg.lesson);h.state.pkg.baseline=clone(h.state.pkg.lesson);const before=canonical(h.state.editor);
   await assert.rejects(prepareTransfer(h.state.pkg,h.io));assert.equal(canonical(h.state.editor),before);assert.equal(h.state.sendCount,0);
  }

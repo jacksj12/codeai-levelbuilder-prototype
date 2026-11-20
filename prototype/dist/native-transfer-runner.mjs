@@ -9,6 +9,7 @@ export function unsupportedNativeTransferActions(plan){
  return plan.operations.filter(op=>{
   if(!unsupportedNativeActions({operations:[op]}).length)return false;
   const p=op.path;
+  if(op.kind==='append'&&p.length===1&&p[0]==='activities')return canonical(op.after)!==canonical({title:'',duration:null,sections:[emptySection]});
   if(op.kind==='set'&&p.length===5&&p[0]==='activities'&&Number.isInteger(p[1])&&p[1]>=0&&p[2]==='sections'&&Number.isInteger(p[3])&&p[3]>=0&&p[4]==='progression'){
    const group=op.after;return op.before!==null||typeof group?.title!=='string'||!Array.isArray(group.levels)||!group.levels.length||group.levels.length>8||new Set(group.levels.map(l=>l.key)).size!==group.levels.length||group.levels.some(l=>typeof l.key!=='string'||!l.key.trim()||typeof l.assessment!=='boolean'||!Number.isInteger(l.number)||l.number<1);
   }
@@ -28,7 +29,8 @@ function preserved(before,after,op){
  const protection=clone(after.nativeProtection),p=op.path;restoreFieldProtection(protection,before.nativeProtection,savedFieldPath(op));
  if(op.kind==='append'){
   const activity=protection.unmanagedActivities[p[1]];
-  if(p.length===3)activity.activitySections.pop();
+  if(p.length===1)protection.unmanagedActivities.pop();
+  else if(p.length===3)activity.activitySections.pop();
   else activity.activitySections[p[3]].tips.pop();
  }else if(p.at(-1)==='progression'){
   const section=protection.unmanagedActivities[p[1]].activitySections[p[3]],original=before.nativeProtection.unmanagedActivities[p[1]].activitySections[p[3]];
@@ -63,7 +65,7 @@ export async function stageNativeTransferPlan(plan,bridge,{journal=null,maxOpera
   const fresh=await bridge({action:'read'});
   if(canonical(fresh)!==canonical(capture)){result.status='blocked';result.reason='Outside changes detected. No further actions were taken.';break;}
   applyOperation(expected,op);
-  const action=op.kind==='set'?(op.path.at(-1)==='progression'?'append-progression':'set-scalar'):op.path.length===3?'append-section':'append-callout';
+  const action=op.kind==='set'?(op.path.at(-1)==='progression'?'append-progression':'set-scalar'):op.path.length===1?'append-activity':op.path.length===3?'append-section':'append-callout';
   let nextCapture;
   try{
    nextCapture=await bridge({action,mode:action==='append-progression'?'unsaved-level-staging':op.kind==='set'?'unsaved-scalar-staging':'unsaved-structure-staging',operation:op,expectedCaptureDigest:await digest(capture)});

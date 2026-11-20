@@ -53,6 +53,8 @@ function render(){
   el('p','Destination title: '+review.baseline.name,$('changes'));
   const table=el('table','',$('changes')),head=el('tr','',el('thead','',table));for(const text of ['Section','Level group','Existing level','Assessment'])el('th',text,head);
   const body=el('tbody','',table);for(const c of reviewedLevelGroups(review))for(const l of c.addLevels){const row=el('tr','',body);el('td',c.section||c.activity,row);el('td',c.progression||'(untitled)',row);el('td',l.name,row);el('td',l.assessment?'Yes':'No',row);}
+  if(review.activityAdditions?.length){el('h3','New activities',$('changes'));for(const c of review.activityAdditions){const d=el('details','',$('changes'));el('summary',c.label+': '+c.activity.name,d);el('p','Before: no activity. After: '+c.activity.name+' · '+(c.activity.duration??'Untimed')+' minutes. Sections are listed below.',d);}}
+  if(review.calloutAdditions?.length){el('h3','New callouts on existing sections',$('changes'));for(const c of review.calloutAdditions){const d=el('details','',$('changes'));el('summary',c.label,d);el('p','Before: no callout at this appended position.',d);el('p','Type: '+c.tip.type,d);el('pre',c.tip.markdown,d);}}
   if(review.sectionAdditions?.length){
    el('h3','New sections and callouts',$('changes'));
    const names={teachingTip:'Teaching Tip',contentCorner:'Content Corner',discussionGoal:'Discussion Goal',assessmentOpportunity:'Assessment Opportunity',ethicsOpportunity:'Ethics Opportunity'};
@@ -124,7 +126,7 @@ $('load-teaching-demo').onclick=()=>run(async()=>{
  const source=await(await fetch('fixture.json')).json();state.demo=createDemo(source,{teaching:true});state.pkg=state.demo.pkg;state.destination=state.demo.destination;persist();io=await makeIO();status('Teaching demo loaded. Prepare the review to inspect teaching text, activity title and timing, plus four missing links.');
 });
 $('load-structure-demo').onclick=()=>run(async()=>{
- const source=await(await fetch('fixture.json')).json();state.demo=createDemo(source,{teaching:true,structure:true,complete:true});state.pkg=state.demo.pkg;state.destination=state.demo.destination;persist();io=await makeIO();status('Structure demo loaded. Prepare the review to inspect a new section with five callouts and a level, existing callout edits, teaching changes, and four total links.');
+ const source=await(await fetch('fixture.json')).json();state.demo=createDemo(source,{teaching:true,structure:true,complete:true});state.pkg=state.demo.pkg;state.destination=state.demo.destination;persist();io=await makeIO();status('Structure demo loaded. Review two new activities, appended sections, a new callout on an existing section, teaching changes, and four total links.');
 });
 $('new-demo').onclick=()=>{const next=new URL(location.href);next.searchParams.delete('run');location.href=next;};
 $('package-file').onchange=()=>run(async()=>{

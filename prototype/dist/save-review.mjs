@@ -1,4 +1,4 @@
-import {appendedSections,inAppendedSection,sectionPayload,stripNewSections,newSectionLink} from './reviewed-structure.mjs';
+import {appendedActivities,appendedCallouts,inNewActivity,activityPayload,tipPayload,appendedSections,inAppendedSection,sectionPayload,stripNewSections,newSectionLink} from './reviewed-structure.mjs';
 import {savedFieldPath,liveFieldPath,fieldAt,putField,nativeFieldValue,restoreFieldProtection} from './reviewed-fields.mjs';
 import {clone,canonical,digest,validatePlan} from './transfer-core.mjs';
 import {validDestination} from './destination.mjs';
@@ -30,15 +30,21 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
  assert(canonical(normalized.lesson)===canonical(plan.expectedLesson),'The staged content does not match its reviewed transfer plan.');
  assert(plan.operations.length>0,'There are no reviewed changes to save.');
  const scopes=appendedSections(plan),sectionAdditions=[],candidate=clone(freshSaved),changes=[],fieldChanges=[];
+ const activityIndices=appendedActivities(plan),activityAdditions=[],calloutAdditions=[],tipScopes=appendedCallouts(plan);
  const projection=stripNewSections(staged,scopes);
+ for(const ai of activityIndices){assert(candidate.activities.length===ai,'New activities must append in order.');const activity=activityPayload(staged.live.activities[ai],ai+1);candidate.activities.push(activity);activityAdditions.push({activityIndex:ai,label:'New activity '+(ai+1),activity:clone(activity)});}
+ for(const ai of [...activityIndices].reverse()){assert(projection.live.activities.length===ai+1,'Unexpected activity ordering.');projection.live.activities.pop();projection.protection.unmanagedActivities.pop();}
+ for(const scope of [...tipScopes].reverse()){const {activityIndex:ai,sectionIndex:si,tipIndex:ti}=scope;for(const root of [projection.live.activities,projection.protection.unmanagedActivities]){assert(root[ai].activitySections[si].tips.length===ti+1,'Unexpected callout ordering.');root[ai].activitySections[si].tips.pop();}}
+ for(const scope of tipScopes){const {activityIndex:ai,sectionIndex:si,tipIndex:ti}=scope,section=candidate.activities[ai].activitySections[si],tip=tipPayload(staged.live.activities[ai].activitySections[si].tips[ti]);if(section.tips===null)section.tips=[];assert(Array.isArray(section.tips)&&section.tips.length===ti,'Callouts must append in order.');section.tips.push(tip);calloutAdditions.push({...scope,sectionId:section.id,label:'Activity '+(ai+1)+' / Section '+(si+1)+' / New callout '+(ti+1),tip});}
+
  for(const {activityIndex:ai,sectionIndex:si} of scopes){
   const activity=candidate.activities[ai],native=staged.live.activities[ai];
-  assert(activity&&native&&activity.id===native.id&&si>=freshSaved.activities[ai].activitySections.length&&activity.activitySections.length===si,'New sections must append to a preserved existing activity.');
+  assert(activity&&native&&(activityIndices.includes(ai)||activity.id===native.id)&&si>=(freshSaved.activities[ai]?.activitySections.length||0)&&activity.activitySections.length===si,'New sections must append to a preserved existing activity.');
   const section=sectionPayload(native.activitySections[si],si+1);activity.activitySections.push(section);
-  sectionAdditions.push({activityIndex:ai,activityId:activity.id,sectionIndex:si,label:'Activity '+(ai+1)+' / New section '+(si+1),section:clone(section)});
+  sectionAdditions.push({activityIndex:ai,activityId:activity.id??null,newActivity:activityIndices.includes(ai),sectionIndex:si,label:'Activity '+(ai+1)+' / New section '+(si+1),section:clone(section)});
  }
  for(const op of plan.operations){
-  if(inAppendedSection(op,scopes))continue;
+  if(inNewActivity(op,activityIndices)||inAppendedSection(op,scopes)||op.kind==='append'&&op.path.length===5&&op.path[4]==='callouts')continue;
   const p=op.path,nativePath=savedFieldPath(op);
   if(nativePath){
    const livePath=liveFieldPath(op),before=fieldAt(freshSaved,nativePath),after=nativeFieldValue(op);
@@ -73,7 +79,7 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
  const expectedCounts={activities:normalized.lesson.activities.length,sections:sections.length,callouts:sections.reduce((n,s)=>n+s.callouts.length,0),resources:normalized.lesson.resources.length,levels:levels.length,assessments:levels.filter(l=>l.assessment).length};
  const review={schemaVersion:1,kind:'native-save-review',status:'ready-for-review',createdAt:now,expiresAt:now+10*60*1000,
   destination:clone(plan.destination),remoteWrites:false,saveAllowed:false,requiresUserApproval:true,requiresRestaging:true,
-  baselineDigest:await digest(freshSaved),stagedDigest:await digest(staged),rehearsalPlanId:plan.id,changes,fieldChanges,sectionAdditions,
+  baselineDigest:await digest(freshSaved),stagedDigest:await digest(staged),rehearsalPlanId:plan.id,changes,fieldChanges,sectionAdditions,activityAdditions,calloutAdditions,
   request:{method:'PUT',url:'https://levelbuilder-studio.code.org/lessons/'+plan.destination.id,contentType:'application/json;charset=UTF-8',body:JSON.stringify(payload)},
   baseline:clone(freshSaved),baselineNativeProtection:clone(initial.protection),expectedLesson:clone(plan.expectedLesson),expectedCounts,
   preserved:{activityIds:freshSaved.activities.map(a=>a.id),sectionIds:freshSaved.activities.flatMap(a=>a.activitySections.map(s=>s.id)),resourceKeys:JSON.parse(payload.resources),vocabularyKeys:JSON.parse(payload.vocabularies)},
@@ -105,9 +111,11 @@ export async function validateStagedSaveReview(review,capture){
  assert(canonical(comparableLesson(normalized.lesson))===canonical(comparableLesson(review.expectedLesson)),'The current staged editor differs from the approved result.');
  const protection=clone(capture.protection),requested=JSON.parse(JSON.parse(review.request.body).activities);
  for(const change of review.fieldChanges||[])restoreFieldProtection(protection,review.baselineNativeProtection,change.path);
+ for(const c of review.activityAdditions||[]){const a=capture.live.activities[c.activityIndex];assert(canonical(activityPayload(a,c.activityIndex+1))===canonical(c.activity),'A new activity differs from its review.');}
+ for(const c of [...(review.calloutAdditions||[])].reverse()){const s=capture.live.activities[c.activityIndex]?.activitySections[c.sectionIndex],p=protection.unmanagedActivities[c.activityIndex]?.activitySections[c.sectionIndex];assert(s?.id===c.sectionId&&p?.tips.length===c.tipIndex+1&&canonical(tipPayload(s.tips[c.tipIndex]))===canonical(c.tip),'A new callout differs from its review.');p.tips.pop();}
  for(const change of [...(review.sectionAdditions||[])].reverse()){
   const ai=change.activityIndex,si=change.sectionIndex,activity=capture.live.activities[ai];
-  assert(activity?.id===change.activityId&&canonical(sectionPayload(activity.activitySections[si],si+1))===canonical(change.section),'A staged new section differs from its reviewed content.');
+  assert((change.newActivity||activity?.id===change.activityId)&&canonical(sectionPayload(activity.activitySections[si],si+1))===canonical(change.section),'A staged new section differs from its reviewed content.');
   assert(protection.unmanagedActivities[ai].activitySections.length===si+1,'Unexpected new-section ordering.');
   protection.unmanagedActivities[ai].activitySections.pop();
  }
@@ -125,6 +133,7 @@ export async function validateStagedSaveReview(review,capture){
   const original=review.baselineNativeProtection.unmanagedActivities[ai].activitySections[si];
   protection.unmanagedActivities[ai].activitySections[si].scriptLevels=clone(original.scriptLevels);protection.unmanagedActivities[ai].activitySections[si].progressionName=original.progressionName;
  }
+ for(const c of [...(review.activityAdditions||[])].reverse()){assert(protection.unmanagedActivities.length===c.activityIndex+1,'Unexpected new activity order.');protection.unmanagedActivities.pop();}
  assert(canonical(protection)===canonical(review.baselineNativeProtection),'Unreviewed settings or native records changed before saving.');
  return true;
 }
@@ -144,7 +153,7 @@ export async function verifySavedReadback(review,saved){
  const sectionIds=new Set(review.baseline.activities.flatMap(a=>a.activitySections.map(s=>String(s.id))));
  for(const change of [...(review.sectionAdditions||[])].reverse()){
   const activity=projection.activities[change.activityIndex],section=activity?.activitySections[change.sectionIndex];
-  if(!section||activity.id!==change.activityId||activity.activitySections.length!==change.sectionIndex+1){mismatches.push('A new section is missing, reordered or duplicated.');continue;}
+  if(!section||!change.newActivity&&activity.id!==change.activityId||activity.activitySections.length!==change.sectionIndex+1){mismatches.push('A new section is missing, reordered or duplicated.');continue;}
   const id=String(section.id),raw=clone(section);delete raw.id;
   if(!/^[1-9]\d*$/.test(id)||!Number.isSafeInteger(Number(id))||sectionIds.has(id))mismatches.push('A new section has a missing, reused or duplicated saved identity.');
   sectionIds.add(id);
@@ -156,6 +165,13 @@ export async function verifySavedReadback(review,saved){
   if(canonical(raw)!==canonical(change.section))mismatches.push('A new section or its callouts differ from the exact reviewed structure.');
   activity.activitySections.pop();
  }
+ const activityIds=new Set(review.baseline.activities.map(a=>String(a.id)));
+ for(const c of [...(review.activityAdditions||[])].reverse()){
+  const a=projection.activities[c.activityIndex],id=String(a?.id);if(!a||projection.activities.length!==c.activityIndex+1){mismatches.push('A new activity is missing or reordered.');continue;}
+  if(!/^[1-9]\d*$/.test(id)||!Number.isSafeInteger(Number(id))||activityIds.has(id))mismatches.push('A new activity has a missing, reused or duplicate saved identity.');activityIds.add(id);
+  const raw=clone(a);delete raw.id;if(canonical(raw)!==canonical(c.activity))mismatches.push('A new activity contains unreviewed fields.');projection.activities.pop();
+ }
+ for(const c of [...(review.calloutAdditions||[])].reverse()){const s=projection.activities[c.activityIndex]?.activitySections[c.sectionIndex];if(!s||s.id!==c.sectionId||s.tips.length!==c.tipIndex+1||canonical(s.tips[c.tipIndex])!==canonical(c.tip))mismatches.push('A new callout differs from its exact review.');else {s.tips.pop();if(!s.tips.length&&review.baseline.activities[c.activityIndex].activitySections[c.sectionIndex].tips===null)s.tips=null;}}
  for(const change of review.fieldChanges||[]){
   if(canonical(fieldAt(saved,change.path))!==canonical(change.after))mismatches.push('A saved teaching field differs from its exact reviewed value.');
   try{putField(projection,change.path,change.before);}catch{mismatches.push('A reviewed native field is missing.');}

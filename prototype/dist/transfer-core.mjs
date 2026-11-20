@@ -117,7 +117,7 @@ export async function buildTransferPlan(pkg,snapshot,decisions={}){
  for(const resource of before.resources)if(!proposed.resources.some(r=>resourceEqual(r,resource)))preserved.push({label:'Resource / '+resource.name,reason:'Destination-only association retained'});
  for(let ai=0;ai<proposed.activities.length;ai++){
   const activity=proposed.activities[ai],ap=['activities',ai];
-  if(!working.activities[ai])await propose(['activities'],{title:'',duration:null,sections:[]},'Add activity '+(ai+1),'append');
+  if(!working.activities[ai])await propose(['activities'],{title:'',duration:null,sections:[{title:'',duration:null,body:'',remarks:false,callouts:[],progression:null}]},'Add activity '+(ai+1),'append');
   await scalarFields(ap,activity,'Activity '+(ai+1),['title','duration']);
   for(let si=0;si<activity.sections.length;si++){
    const section=activity.sections[si],sp=[...ap,'sections',si],label='Activity '+(ai+1)+' / Section '+(si+1);
