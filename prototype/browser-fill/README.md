@@ -1,60 +1,52 @@
-# Browser transfer companion — supported native transfer prototype
+# Native browser companion — setup and limits
 
-This non-API transfer path has a tested local rehearsal runner and a restricted native existing-field adapter. Full native lesson import and all remote saving remain unavailable. It is separate from `api-companion`, which reads through the authenticated lesson editor endpoint. See [native adapter evidence and limits](../NATIVE-SCALAR-ACCEPTANCE.md).
+The **Lesson Studio native companion** lives in the parent `prototype` folder. Its reusable transfer screen reads an owned practice destination, rehearses and restores supported changes, shows an exact review, and requires separate approval before one guarded save. It is distinct from the read-only `api-companion` extension and from the older bounded unsaved staging tools in this popup.
 
-## Local comparison and rehearsal
+## Install or update
 
-Run the prototype server from this clone. Open `transfer.html`, or choose Transfer review in the lesson workspace. Load an approved review package, then choose Create isolated local rehearsal. Review proposed actions, stage with a small action limit, reload and resume. A completed rerun detects already-present content. The page explains that its generic DOM editor and catalog are synthetic.
+1. Run the local workspace with `npm start` from `prototype` when you need local editing/export or the isolated demo. The unpacked extension itself loads files from this checkout.
+2. In Edge or Chrome extension management, enable Developer mode and choose **Load unpacked**. Select the **parent `prototype` directory**, containing `manifest.json`; do not select `browser-fill` or `api-companion`.
+3. When updating this checkout, reload the installed extension and reopen its transfer screen. Current version: **0.10.3**. Preserve/download any current evidence first. No private review package or save authorization ships in this clone.
+4. Sign in to Level Builder normally and open the exact owned practice lesson's canonical editor: `https://levelbuilder-studio.code.org/lessons/ID/edit`.
 
-Paste a native page capture into Transfer review for read-only comparison there. Supported native staging is available only through the separate companion popup described below. Missing resource/level mappings and unsupported native actions block the whole native run rather than being skipped. No plan creates shared records or uploads assets.
+No API key, copied credentials or additional host permissions are needed. Official source lessons remain read-only. A local package approval is not approval to save remotely.
 
-Comparison state is stored under `lesson-transfer-v1`, separately from the review editor. Download comparison and recovery evidence before clearing browser storage. Recompare current local editor retains outside edits and previous reports; starting a new comparison requires an explicit reset confirmation. The report export includes the approved package and destination evidence and should stay private.
+## Prepare a reusable transfer
 
-## Native companion setup and review
+1. From the practice editor tab, open the companion popup and choose **Open reusable lesson transfer**. Keep the original editor tab open.
+2. Confirm the exact practice URL and permission to edit it. Upload an approved JSON **review package** exported from Lesson Studio, not normalized source JSON or a workspace backup. Preparation starts automatically once both inputs are present.
+3. Preparation compares fresh saved data with the open editor, checks supported mappings, stages changes temporarily, restores the complete original editor and checks level conflicts in the unit. Unsaved content/settings, stale saved baselines, unsupported operations and outside edits stop preparation.
+4. Inspect every before/after value, new activity/section/callout and level association. Destination title and all unlisted content/settings/record identities remain preserved. Intentional clearing is shown explicitly.
+5. Only when the exact changes are authorized, check the separate approval and choose **Approve and save once**. A restore point and durable attempt receipt must be stored before dispatch. The companion sends at most once, independently reads saved data, rechecks without resending and downloads the report.
 
-In Chrome or Edge, choose Load unpacked and select the **parent `prototype` directory**, which contains the root `manifest.json`. Do not select this subdirectory. This does not replace the separate API companion extension.
+An attempted run resumes as readback-only. **Check saved result again — no resend** does not retry a save. An uncertain outcome must never trigger a blind retry. Preserve any outside unsaved edits before reopening the native editor to synchronize its baseline after a verified save.
 
-Open the already signed-in assigned playground editor and choose Read / recompare current editor. Paste an approved review package into the popup, choose Load review package, and inspect every proposed action. Choose explicitly whether to keep or replace nonempty current content. Preserve intentional current sandbox naming rather than blindly replacing it from an older export.
+Supported reusable changes: overview/student overview, purpose, preparation, assessment opportunities; existing activity/section titles, whole-minute timing, guidance and remarks; append-only activities and sections; all five new callout types, including on existing sections; existing callout text/type in a section with one callout; verified existing levels in empty existing/new progressions with supported flags. Multi-callout targeting, objective/vocabulary/resource collection mutations, replacement of populated progressions and unsupported mappings block the whole batch before staging. The [main guide](../README.md) contains the capability table and synthetic demo walkthrough.
 
-The popup only enables Stage reviewed changes when every mapping, approval and capability check passes. Supported actions are existing title/front-matter text, activity title/whole-minute timing, and section title/whole-minute timing/guidance/remarks. Appending empty sections and all five callout types is also supported, followed by reviewed section fields. Activity creation, objective/vocabulary changes, edits to existing callouts, resource/level associations and other unsupported operations block the entire run. Source lesson database identities are not reused. Save, resource creation and asset uploads are absent.
+## Reports and interrupted preparation
 
-Use a small action limit for initial native verification. Stop leaves existing unsaved changes intact. Checkpoints survive popup closure through local extension storage. If the native page is reloaded and unsaved changes disappear, the adapter refuses blind replay and requires recomparison. Downloaded evidence includes private curriculum and should remain private.
+Download the run report before changing or reloading an editor after an error. Baseline diagnostics identify normalized differing field paths or incomplete capture blockers. A failed run that owns unsaved changes exposes **Restore this run’s unsaved staging**; restoration verifies ownership and refuses outside changes. Keep both tabs and retained browser data until recovery is understood.
 
-The exact host, assigned aliases, lesson identity, current field values, matching serialized state, open dialogs/inline edits and unrelated native settings are checked before mutations. No endpoint is fetched by this adapter. Existing-field actions use native control events; no private React store or hidden-input value is written.
+If storage fails, write controls pause and the current in-memory report remains downloadable. Save it, restore storage access and reload the same run. Do not clear browser data or start a new save. The report includes private curriculum, destination data, request details and restore evidence; keep it outside Git. It is not a full local workspace backup.
 
-The user installed the extension in Edge and completed a live read and one unsaved title write. The exported report confirmed one completed action and no save; the user confirmed reloading removed the marker. The actual function passed native-shaped local DOM tests, and separate agent-operated unsaved native UI checks were restored and verified after reload. These are distinct evidence, not full native acceptance. See [native adapter results](../NATIVE-SCALAR-ACCEPTANCE.md), [local rehearsal results](../TRANSFER-REHEARSAL-ACCEPTANCE.md) and [native acceptance status](../BROWSER-FILL-ACCEPTANCE.md).
+## Repeat-test cleanup
 
-## Automatic engineering verification
+After a verified save with added links, the screen prepares exact receipt-owned removals. Imported successful test reports can also prepare cleanup on their owning practice destination. Cleanup requires a separate exact approval, stores recovery evidence before at most one dispatch, and verifies fresh saved data. Rechecks do not resend.
 
-Open the assigned editor and choose **Run automatic unsaved check and restore**. The updated companion launches a dedicated extension tab; keep that tab and the editor open. The popup can close. The run checks all 12 supported existing field classes, resumes, repeats without duplicate writes and restores the originals. It then creates one temporary section, fills it, adds all five native callout types and removes the temporary section. It downloads evidence automatically, and clears stale comparison packages. No extra permissions or remote Save operation were added. Unknown outside edits stop cleanup instead of being overwritten.
+Only unchanged level associations owned by the verified test receipt can be removed. Underlying levels, teaching edits, appended activities/sections/callouts and unrelated data remain. Outside edits or ambiguous ownership block cleanup. This is not a whole-lesson undo. **Live cleanup remains unaccepted; do not run it on the accepted lesson for delivery testing.**
 
-The earlier two-field automatic suite passed a live Edge run. The combined twelve-field and five-callout structural suite passed live in Edge, including restoration. The same reviewed transfer runner passed a live 1-of-10 bounded segment, resume to 10, duplicate-free rerun, and complete restoration. The transport now has a 15-second timeout and automatically activates the verified assigned editor to recover from browser freezing; discarded tabs are refused. These engineering checks do not implement full native lesson import.
+## Local demo and acceptance boundary
 
-## Approved existing-level rehearsal
+Run the local server and open `workflow.html`. **Load broader transfer demo** exercises missing activities, appended sections/callouts, teaching changes, four existing links and three assessments against a synthetic destination. Prepare, inspect, approve a simulated save, reload and recheck: one simulated save, no live requests. Controller regression checks cover that screen path and failed evidence storage. A fresh browser walkthrough was unavailable in the latest delivery session.
 
-The native adapter can resolve exact names in the existing-level picker and link them into an empty progression, including reviewed assessment flags. It never uses Create New Level or Copy, and never writes source database identities. The popup offers Verify existing level mappings before reviewed staging. The automatic controller also rehearses the locally approved package from the ignored accepted-rehearsal.json, preserves the current playground title, rejects other content decisions, and removes only its exact newly staged associations afterward. Saved associations cannot be removed by this cleanup. The complete accepted-package level path passed live in Edge with 3 activities, 10 sections, 6 callouts, 3 resources, 4 level links and 3 assessments. One group was staged, the second resumed, a rerun made no new associations, and the complete original capture was restored. No lesson Save was performed.
+The latest accepted live result is the explicitly approved **native UI save** of the complete AI Lab proposal, independently verified after a fresh editor load with zero mismatches. It has three activities, ten sections, six callouts, four original levels and three assessment flags. The earlier restricted companion four-link save also passed live independent readback. These are separate from the reusable companion's automatic full path, which remains unverified end to end on the live site. No new live save or cleanup is authorized by this guide.
 
+## Older tools and historical evidence
 
-## Explicit approved save job
+The popup's **Read / recompare current editor**, **Load review package**, mapping verification and bounded **Stage reviewed changes** use the older unsaved adapter. Their capability checks are narrower than the reusable screen; unsupported actions block the whole legacy batch. A small action limit, resume, duplicate-free reruns and per-operation evidence are retained. Staging itself does not save.
 
-The parent companion can complete a separately approved four-link playground save using an ignored local job. When that mode is active, the popup button reads **Complete approved four-link save**, and the controller is labeled **Approved four-link save**. It is not an unsaved test. Ordinary Stage reviewed changes remains unsaved. The controller preserves the original snapshot, sends at most one approved request, reads the saved lesson back, then stops. An uncertain outcome is never automatically retried. The first live write remains unconfirmed; see ../NATIVE-SCALAR-ACCEPTANCE.md for status and recovery details.
+**Run automatic unsaved check and restore** opens a dedicated controller tab for existing fields and temporary section/callout checks. It temporarily changes the editor and restores only owned changes. It is not a read-only demo. The committed automation revision remains `verification-release-20`; no personal approved-save job is bundled or armed. Historical ignored accepted-package/save-job files must not be reused as general save permission. Do not run these tests on the accepted lesson during delivery.
 
+`transfer.html` is a separate local comparison and synthetic DOM rehearsal tool; it does not publish. Its reports and storage differ from reusable transfer sessions. The API comparison extension under `api-companion` remains GET-only.
 
-### Verified save result
-
-The approved original-four-link save completed live with HTTP 200 after the user freed the original levels from the other playground lesson. All four links and three assessment flags passed report readback and a separate authenticated reload, with all other saved data preserved. Continuation is stopped and a repeated launch reads the result without sending another PUT. The successful receipt and both original/post-save restore points are retained privately in Documents/Lesson Studio Checks. Reopen the saved editor before further manual editing so its native baseline includes the saved associations. This is a restricted save path, not a general-purpose publisher.
-
-
-### Git handoff default
-
-Version 0.4.0 uses the verification-release revision: ordinary unsaved field and temporary-section/callout checks only. It does not load a personal accepted package or execute an approved-save job. Those ignored files remain local for evidence and recovery. Configuring another accepted-package rehearsal or save is separate work, with fresh destination review and authorization. No extension permissions changed.
-
-## Reusable transfer screen (0.5.0)
-
-The popup now includes **Open reusable lesson transfer**. It opens a separate screen bound to the originating tab, accepts a user-selected canonical practice destination and an uploaded approved package, and prepares a review before explicit save approval. See the sprint-demo and reusable-workflow instructions in ../README.md. No private bundled job file is needed for this path. The old verification and accepted-save paths are retained for historical recovery; their private files and receipts are unchanged. No new live save was performed while developing this screen.
-
-## Reviewed test cleanup — November 20 follow-up
-
-Companion 0.6.0 implements receipt-owned saved-link cleanup. After verified transfer it automatically prepares the exact removals. Cleanup requires separate approval, persists recovery evidence before dispatch, sends at most once, verifies fresh saved data, rechecks without resend, and downloads the report automatically. Imported successful reports support earlier runs. Only unchanged associations from the verified test receipt are removed; underlying levels and unrelated saved content remain. Changed links, outside unsaved edits, stale reviews, and unreadable evidence block dispatch. Native editor refresh is guarded against outside edits.
-
-The complete simulated transfer/cleanup/reload/recheck cycle passed, with exactly one cleanup request and verified restoration. Deduplicated local storage retains complete recovery evidence and reads legacy records. This supersedes earlier statements that saved cleanup is unimplemented. Native cleanup is implemented but has NOT been live-accepted; no live links were removed by this change. Reload the installed companion once to load 0.6.0, then review and approve the exact cleanup on the owning practice lesson.
+The newest [handoff](../../NEXT-SESSION-HANDOFF.md) supersedes earlier pending-status wording in dated evidence. Historical live unsaved checks, four-link save receipts, native-shaped fixture results and acceptance limits are retained in [native results](../NATIVE-SCALAR-ACCEPTANCE.md), [rehearsal results](../TRANSFER-REHEARSAL-ACCEPTANCE.md), [activity transfer](../ACTIVITY-TRANSFER-ACCEPTANCE.md) and related acceptance documents. Private evidence stays outside this checkout.

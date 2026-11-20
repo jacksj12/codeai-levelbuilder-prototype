@@ -13,9 +13,12 @@ const $=id=>document.getElementById(id),native=location.protocol==='chrome-exten
 const url=new URL(location.href);let runId=url.searchParams.get('run');
 if(!runId){runId=crypto.randomUUID();url.searchParams.set('run',runId);history.replaceState(null,'',url);}
 const key='reviewed-transfer-session-'+runId;
-let state={mode:native?'native':'demo',tabId:Number(location.hash.slice(1))},busy=false,io,startupError='';
+let state={mode:native?'native':'demo',tabId:Number(location.hash.slice(1))},busy=false,io,startupError='',evidenceError='';
 try{state=readTransferRecord(localStorage,key)||state;if(state.mode!==(native?'native':'demo'))throw Error('This run belongs to a different mode. Reopen it in its original browser context.');}catch(error){startupError=error.message;state={mode:native?'native':'demo',tabId:Number(location.hash.slice(1))};}
-const persist=()=>writeTransferRecord(localStorage,key,state);
+function persistRecord(recordKey,value){
+ try{writeTransferRecord(localStorage,recordKey,value);}catch(error){evidenceError=error.message;throw error;}
+}
+const persist=()=>persistRecord(key,state);
 const status=message=>{$('status').textContent=message;};
 const el=(tag,text,parent)=>{const n=document.createElement(tag);n.textContent=text;parent.append(n);return n;};
 function progress(step){for(let i=1;i<=4;i++){const node=$('step-'+i);node.classList.toggle('active',i===step);if(i===step)node.setAttribute('aria-current','step');else node.removeAttribute('aria-current');}}
@@ -66,12 +69,12 @@ function render(){
     if(s.scriptLevels.length)el('p','Level group: '+s.progressionName+' · '+s.scriptLevels.length+' reviewed existing level link(s), listed above.',details);
     for(const tip of s.tips){el('h4',names[tip.type],details);el('pre',tip.markdown,details);}
    }
-   el('p','New section and callout saves are locally tested; live saved acceptance is pending. All existing sections remain preserved.',$('changes'));
+   el('p','Reusable companion section/callout saves have simulation coverage; the full automatic live path remains unverified. All existing sections remain preserved.',$('changes'));
   }
   if(review.fieldChanges?.length){
    el('h3','Teaching text and lesson structure',$('changes'));
    for(const change of review.fieldChanges){const details=el('details','',$('changes'));el('summary',change.label,details);el('p','Before',details);el('pre',fieldDisplay(change,change.before),details);el('p','After',details);el('pre',fieldDisplay(change,change.after),details);}
-   el('p','Teaching-field saves have local test coverage; live saved acceptance is still pending. Review every before-and-after value before approving.',$('changes'));
+   el('p','Reusable companion teaching saves have simulation coverage; the full automatic live path remains unverified. Review every before-and-after value before approving.',$('changes'));
   }
   el('p','Preserved: destination title, unlisted teaching content, settings, resources, objectives, vocabulary, and existing record identities. Original editor restored after rehearsal.',$('changes'));
   const expiryNote=el('p','',$('changes'));expiryNote.id='review-expiry';expiryNote.setAttribute('aria-live','polite');
@@ -92,6 +95,12 @@ function render(){
  progress(state.receipt?4:state.job?3:state.pkg?2:1);
  updateReviewWindow();
  renderCleanup();
+ if(evidenceError){
+  for(const control of document.querySelectorAll('button,input'))control.disabled=true;
+  $('download').disabled=false;
+  status(evidenceError+' Download the current run report before reloading this same run.');
+  $('status').setAttribute('role','alert');
+ }
 }
 async function makeIO(){
  let adapter;
@@ -110,13 +119,13 @@ async function makeIO(){
  }else adapter=demoAdapter(state.demo,persist);
  const prefix=native?'native-approved-save-':key+'-receipt-';
  return {...adapter,onProgress:status,loadReceipt:async digest=>readTransferRecord(localStorage,prefix+digest),
-  persist:async(digest,receipt)=>{writeTransferRecord(localStorage,prefix+digest,receipt);if(receipt.kind==='test-link-cleanup-receipt')state.cleanupReceipt=receipt;else state.receipt=receipt;persist();},
+  persist:async(digest,receipt)=>{if(receipt.kind==='test-link-cleanup-receipt')state.cleanupReceipt=receipt;else state.receipt=receipt;persistRecord(prefix+digest,receipt);persist();},
   checkpoint:async point=>{state.checkpoint=point;state.needsRecovery=point.stage?.restored===false;persist();$('download').disabled=false;},loadCheckpoint:async()=>state.checkpoint};
 }
 async function run(action){
- if(busy||startupError)return;busy=true;render();
+ if(busy||startupError||evidenceError)return;busy=true;render();
  try{await navigator.locks.request(native?'lesson-studio-native-verification':key,{ifAvailable:true},async lock=>{if(!lock)throw Error('Another run is using this editor. Wait for it to finish.');await action();});}
- catch(error){state.preparationError=error.message;persist();status(error.message);if(state.checkpoint||state.receipt)downloadReport();}
+ catch(error){state.preparationError=error.message;try{persist();}catch{/* Keep the in-memory report available when storage is unavailable. */}status(evidenceError||error.message);if(state.checkpoint||state.receipt||evidenceError)downloadReport();}
  finally{busy=false;render();}
 }
 $('load-demo').onclick=()=>run(async()=>{
@@ -204,4 +213,4 @@ try{if(!startupError){render();if(state.cleanupReceipt?.attempted)status('Cleanu
 if(startupError){status(startupError);$('status').setAttribute('role','alert');for(const control of document.querySelectorAll('button,input'))control.disabled=true;}
 
 
-if(!startupError){setInterval(updateReviewWindow,15000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)updateReviewWindow();});}
+if(!startupError){setInterval(()=>{if(!evidenceError)updateReviewWindow();},15000);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!evidenceError)updateReviewWindow();});}
