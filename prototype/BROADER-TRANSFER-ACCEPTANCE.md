@@ -1,3 +1,5 @@
+> Historical 0.9.0 evidence below. The current 0.10.2 scope, 168-test result, multi-callout guard and unsaved native-staging status are recorded in [activity transfer evidence](ACTIVITY-TRANSFER-ACCEPTANCE.md). No live saved acceptance is implied.
+
 # Broader reviewed transfer — local acceptance
 
 November 20, 2026. Companion 0.9.0. No live lesson writes, live cleanup, extension reload, commit or push were performed.

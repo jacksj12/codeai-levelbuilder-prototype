@@ -149,6 +149,7 @@ export async function verifySavedReadback(review,saved){
  const normalized=normalizeNativeCapture(capture);
  if(normalized.blockers.length)mismatches.push(...normalized.blockers);
  if(canonical(comparableLesson(normalized.lesson))!==canonical(comparableLesson(review.expectedLesson)))mismatches.push('Saved lesson content, ordering or assessment flags differ from the reviewed result.');
+ const requestedActivities=JSON.parse(JSON.parse(review.request.body).activities);
  const projection=clone(saved),newIds=new Set(review.baseline.activities.flatMap(a=>a.activitySections.flatMap(s=>s.scriptLevels.map(sl=>String(sl.id)))));
  const sectionIds=new Set(review.baseline.activities.flatMap(a=>a.activitySections.map(s=>String(s.id))));
  for(const change of [...(review.sectionAdditions||[])].reverse()){
@@ -180,11 +181,16 @@ export async function verifySavedReadback(review,saved){
   let found;
   for(const activity of projection.activities||[])for(const section of activity.activitySections||[])if(section.id===change.sectionId)found=section;
   if(!found){mismatches.push('A reviewed section identity is missing.');continue;}
+  const requested=requestedActivities.flatMap(a=>a.activitySections).find(s=>s.id===change.sectionId);
   if(found.scriptLevels?.length!==change.addLevels.length)mismatches.push('A saved progression has an unexpected number of levels.');
   for(const [index,sl]of (found.scriptLevels||[]).entries()){
    const validId=(typeof sl.id==='number'||typeof sl.id==='string'&&/^\d+$/.test(sl.id))&&Number.isSafeInteger(Number(sl.id))&&Number(sl.id)>0;
    if(!validId||newIds.has(String(sl.id)))mismatches.push('New saved association identities are missing or duplicated.');else newIds.add(String(sl.id));
-   if(String(sl.levels?.[0]?.id)!==String(change.addLevels[index]?.levelId))mismatches.push('A saved link points to a different level record.');
+   const wanted=requested?.scriptLevels[index];
+   if(sl.levels?.length!==1||String(sl.levels?.[0]?.id)!==String(change.addLevels[index]?.levelId)||sl.activeId!=null&&String(sl.activeId)!==String(change.addLevels[index]?.levelId))mismatches.push('A saved link points to a different level record or variant.');
+   if(!wanted||sl.activitySectionPosition!==wanted.activitySectionPosition)mismatches.push('A saved link has different per-section ordering.');
+   for(const key of ['assessment','bonus','challenge','instructor_in_training','show_ai_analysis'])if(Boolean(sl[key])!==Boolean(wanted?.[key]))mismatches.push('A saved link has an unreviewed '+key+' flag.');
+   if(canonical(sl.variants??null)!==canonical(wanted?.variants??null))mismatches.push('A saved link has unreviewed variants.');
   }
   const original=review.baseline.activities.flatMap(a=>a.activitySections).find(s=>s.id===change.sectionId);found.scriptLevels=clone(original.scriptLevels);found.progressionName=original.progressionName;
  }

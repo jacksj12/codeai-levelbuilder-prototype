@@ -5,8 +5,10 @@ import {unsupportedNativeActions} from './native-dom-adapter.mjs';
 
 const emptySection={title:'',duration:null,body:'',remarks:false,callouts:[],progression:null};
 const calloutTypes=['Teaching Tip','Content Corner','Discussion Goal','Assessment Opportunity','Ethics Opportunity'];
+const unsafeMultiCalloutEdit=(plan,op)=>op.kind==='set'&&op.path.length===7&&op.path[4]==='callouts'&&(plan.originalSnapshot?.lesson.activities[op.path[1]]?.sections[op.path[3]]?.callouts.length||0)>1;
 export function unsupportedNativeTransferActions(plan){
  return plan.operations.filter(op=>{
+  if(unsafeMultiCalloutEdit(plan,op))return true;
   if(!unsupportedNativeActions({operations:[op]}).length)return false;
   const p=op.path;
   if(op.kind==='append'&&p.length===1&&p[0]==='activities')return canonical(op.after)!==canonical({title:'',duration:null,sections:[emptySection]});
@@ -17,7 +19,7 @@ export function unsupportedNativeTransferActions(plan){
   if(p.length===3)return canonical(op.after)!==canonical(emptySection);
   if(p.length===5&&Number.isInteger(p[3])&&p[3]>=0&&p[4]==='callouts')return !calloutTypes.includes(op.after?.type)||typeof op.after.body!=='string'||!op.after.body.trim()||op.after.body.length>100000;
   return true;
- });
+ }).map(op=>unsafeMultiCalloutEdit(plan,op)?{...op,label:op.label+' (multi-callout native editor targeting is not verified)'}:op);
 }
 function snapshot(capture){
  const value=normalizeNativeCapture(capture);

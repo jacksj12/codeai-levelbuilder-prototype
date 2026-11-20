@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createDemo,demoAdapter} from '../dist/demo-transfer.mjs';
+import {prepareTransfer,approveTransfer,executeTransfer} from '../dist/reusable-transfer.mjs';
+import {verifySavedReadback} from '../dist/save-review.mjs';
+const source=JSON.parse(readFileSync(new URL('../dist/fixture.json',import.meta.url)));
+async function savedTransfer(){const state=createDemo(source),store=new Map(),io={...demoAdapter(state,()=>{}),checkpoint:async()=>{},persist:async(k,v)=>store.set(k,structuredClone(v)),loadReceipt:async k=>store.get(k)};const job=await prepareTransfer(state.pkg,io),receipt=await executeTransfer(await approveTransfer(job),io);assert.equal(receipt.status,'saved-and-verified');return {job,receipt};}
+test('existing-section saved links reject unreviewed flags, variants, order and extra level identities',async()=>{const {job,receipt}=await savedTransfer();for(const mutate of [sl=>sl.bonus=true,sl=>sl.challenge=true,sl=>sl.instructor_in_training=true,sl=>sl.show_ai_analysis=true,sl=>sl.variants={unreviewed:true},sl=>sl.activitySectionPosition=99,sl=>sl.activeId=999999,sl=>sl.levels.push({...sl.levels[0],id:999999})]){const saved=structuredClone(receipt.readback),sl=saved.activities.flatMap(a=>a.activitySections).find(s=>s.scriptLevels.length).scriptLevels[0];mutate(sl);const result=await verifySavedReadback(job.review,saved);assert.equal(result.passed,false,JSON.stringify(sl));}});
+test('existing-section verification accepts server string IDs and explicit false defaults without ignoring flags',async()=>{const {job,receipt}=await savedTransfer(),saved=structuredClone(receipt.readback);for(const s of saved.activities.flatMap(a=>a.activitySections))for(const sl of s.scriptLevels){sl.id=String(sl.id);sl.levels[0].id=String(sl.levels[0].id);sl.activeId=sl.levels[0].id;for(const key of ['bonus','challenge','instructor_in_training','show_ai_analysis'])sl[key]=false;sl.variants=null;}assert.equal((await verifySavedReadback(job.review,saved)).passed,true);});
