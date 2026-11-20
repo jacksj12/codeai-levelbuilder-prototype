@@ -1,3 +1,11 @@
+# Approved native save completed
+
+The user explicitly approved the exact staged proposal ("It is ready to be saved"). On November 20, 2026, the agent rechecked the unchanged saved baseline and callouts, then clicked native Save and Keep Editing exactly once. An independent fresh editor load verified all activity/section text, timing, remarks and all six callouts against the scoped source package with zero mismatches. Both overviews match exactly. Only overview, studentOverview and activities differ at the top level from the baseline; all other saved fields are unchanged. Original activity and section identities are preserved.
+
+Saved result: 3 activities, 10 sections, 6 callouts, 4 original existing levels and 3 assessment flags. New association IDs: 397404–397407; level IDs: 104255, 104271, 104272, 104273. The rendered lesson page independently shows the complete 45-minute teaching guide. Private evidence in the original Documents/ChatGPT workspace: native-teaching-saved-baseline.json, native-teaching-save-verification.json, native-teaching-saved-lesson.jpg. No retries or cleanup were performed.
+
+This establishes the user-approved native UI save and saved readback for this proposal. The companion automatic end-to-end path and live cleanup remain separately unverified. A voice statement reporting a mismatch was incorrect; actual saved verification found zero mismatches and the user was corrected.
+
 # Activity and existing-section callout transfer
 
 Companion 0.10.2 — November 20, 2026. No live lesson save or cleanup has been performed.
