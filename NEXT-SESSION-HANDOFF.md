@@ -69,6 +69,18 @@ Do not rerun destructive or replacement tests against the accepted saved lesson.
 
 Use http://127.0.0.1:43829/workflow.html. Load demo lesson → prepare review → inspect four links / three assessments → approve simulated save → verify and recheck without resend. This demo uses synthetic destination data and no live writes. It has separate per-run browser storage; existing workspace data and evidence keys are retained. See prototype/README.md for the walkthrough. The user explicitly approved expanding to practice destinations they select and confirm they own; official sources remain read-only. Automatic approval review initially blocked an unconfirmed broadening; after explicit user approval, each selected-destination injection now requires practice confirmation and exact URL/identity checks. No automatic watcher revision was changed and no live lesson or restore evidence was modified.
 
+## Autonomous execution — explicit user preference
+
+The user explicitly requests that the next agent automate the work end to end and not make them repeatedly prompt, click, relay status, or authorize routine continuation. Treat this as a persistent working preference.
+
+- Continue the authorized development cycle: inspect the current state, implement the next scoped milestone, test it, fix failures, verify the result, and update this handoff. Do not stop after each small task to ask whether to proceed.
+- Automate preparation, local checks, evidence capture, recovery reports and repeat-test cleanup wherever supported. Preserve exact-change approval for live lesson saves; automation is not blanket authorization for new remote writes.
+- Use existing context, repository evidence and available tools before asking the user. Do not request information already recorded or repeat completed acceptance steps.
+- Ask only when required: a consequential action lacks authorization, a material product decision cannot reasonably be inferred, access is unavailable, or a genuine blocker cannot be resolved independently. Finish all independent work first and ask one concise question or request the minimum user action, explaining why it is necessary.
+- Give concise progress updates for meaningful results or blockers without turning updates into permission requests. Do not ask the user to monitor progress or relay statuses that available tools can inspect.
+- Keep working within the active session until the authorized outcome is finished or a concrete blocker requires input. Never claim work is running in the background after ending a turn, and never describe a locally tested feature as live-accepted.
+- Keep the accepted live lesson unchanged unless its exact proposed changes are authorized. Live cleanup remains unaccepted; preserve that distinction while continuing unrelated development.
+
 ## User expectations
 
 Continue authorized work without repeatedly asking to proceed. Ask only for a real missing decision or action unavailable through the tools. Be precise about local tests, live unsaved checks and saved verification. Never claim background work continues after ending a turn. The user permits additional agents/sessions if useful; create a user-owned new chat only when explicitly requested. Do not switch models without authorization.
