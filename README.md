@@ -19,7 +19,7 @@ Run the engineering checks from `prototype`:
 node --test --test-isolation=none
 ```
 
-Latest delivery check: **173 passed, 0 failed**. These checks are not independent curriculum acceptance.
+Latest delivery check: **174 passed, 0 failed**. These checks are not independent curriculum acceptance.
 
 ## Delivery guide
 

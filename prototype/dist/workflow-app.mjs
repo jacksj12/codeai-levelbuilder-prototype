@@ -4,7 +4,7 @@ import {reviewWindow} from './transfer-status.mjs';
 import {readTransferRecord,writeTransferRecord} from './transfer-storage.mjs';
 import {clone} from './transfer-core.mjs';
 import {selectDestination} from './destination.mjs';
-import {prepareTransfer,approveTransfer,executeTransfer} from './reusable-transfer.mjs';
+import {readTransferBaseline,prepareTransfer,approveTransfer,executeTransfer} from './reusable-transfer.mjs';
 import {createDemo,demoAdapter} from './demo-transfer.mjs';
 import {recoverNativeLevelCheck} from './native-level-verification.mjs';
 import {saveRequestDigest} from './save-review.mjs';
@@ -42,6 +42,7 @@ function render(){
  $('destination-name').textContent=state.destination?(native?'Live practice destination: ':'Synthetic demo destination: ')+state.destination.url:'';
  $('load-demo').hidden=!!state.demo;$('load-teaching-demo').hidden=!!state.demo;$('load-structure-demo').hidden=!!state.demo;$('new-demo').hidden=!state.demo;
  $('prepare').disabled=busy||!!state.receipt||!!state.needsRecovery;
+ $('read-baseline').disabled=busy||!!state.job||!!state.receipt||!!state.needsRecovery;
  $('review-actions').hidden=!state.job||!!state.receipt||!!state.needsRecovery;
  $('save').disabled=busy||!$('approve').checked||!state.job;
  $('check').hidden=!state.receipt?.attempted||!!state.cleanupReceipt?.attempted;$('check').disabled=busy;
@@ -87,7 +88,7 @@ function render(){
   for(const message of r.verification?.mismatches||[])el('p',message,$('report'));
   if(state.automaticRecheck)el('p','Automatic readback-only recheck completed. No second save was sent.',$('report'));
   if(native&&r.verification?.passed&&!state.cleanupReceipt?.attempted)el('p','Before manual editing, preserve any outside unsaved edits and reopen the lesson to synchronize its saved baseline.',$('report'));
- }else{el('p',state.checkpoint?'Rehearsal: '+state.checkpoint.status+'. No save attempted.':'No save attempted.',$('report'));
+ }else{el('p',state.checkpoint?(state.checkpoint.stagingStarted===false?'Baseline: '+state.checkpoint.status+'. No staging or save attempted.':'Rehearsal: '+state.checkpoint.status+'. No save attempted.'):'No save attempted.',$('report'));
   const stage=state.checkpoint?.stage;
   if(stage?.blockers?.length){el('h3','What needs attention',$('report'));const list=el('ul','',$('report'));for(const blocker of stage.blockers)el('li',blocker,list);}
   if(stage?.restored===true)el('p','Original editor restored. No lesson save was attempted.',$('report'));
@@ -142,6 +143,12 @@ $('package-file').onchange=()=>run(async()=>{
  const file=$('package-file').files[0];if(!file)return;if(file.size>8_000_000)throw Error('Choose a review package smaller than 8 MB.');
  const pkg=JSON.parse(await file.text());const {packageProblems}=await import('./transfer-core.mjs');const problems=packageProblems(pkg);if(problems.length)throw Error(problems.join(' '));
  state.pkg=pkg;delete state.job;$('package-name').textContent=file.name;persist();if($('practice').checked)await prepareReview();else status('Package loaded. Confirm your practice destination to automatically prepare the review.');
+});
+$('read-baseline').onclick=()=>run(async()=>{
+ if(!native||state.job||state.receipt||state.needsRecovery)throw Error('Start a fresh native transfer run before reading a baseline.');
+ state.destination=selectDestination($('destination').value,$('practice').checked);state.practiceConfirmed=true;persist();
+ io=await makeIO();await readTransferBaseline(io);delete state.preparationError;persist();downloadReport();
+ status('Fresh baseline read and report downloaded. No staging or save was attempted. Level mappings and unit conflicts have not been checked.');
 });
 async function prepareReview(){
  const ownTab=native?await chrome.tabs.getCurrent():null;

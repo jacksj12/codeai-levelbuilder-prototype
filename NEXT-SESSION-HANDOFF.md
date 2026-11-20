@@ -1,3 +1,15 @@
+# Selected practice baseline preparation — companion 0.10.4
+
+The user selected https://levelbuilder-studio.code.org/lessons/8898984/edit for reusable companion verification. This is distinct from accepted lesson 8898985. Selection authorizes read/preparation only, not clearing, saving or cleanup. Preserve all current content and inspect a fresh baseline before choosing a scoped package. Do not load the old full AI Lab package by default; unit duplicate-level checks and existing mappings must inform any eventual test proposal.
+
+Browser access was checked once through CUA; no browsers or apps were exposed. No live baseline was read, no native preparation was run and no live lesson was changed. Older downloaded reports exist but were not treated as a new selected-destination baseline.
+
+To remove the package-before-baseline obstacle, 0.10.4 adds Read baseline only and download report to the reusable native screen. It needs no package, requires explicit canonical practice confirmation, pins both saved/DOM reads to the exact originating tab, and retains baseline/capture diagnostics before clean-editor validation. It never stages changes, checks level usage or sends a save. Existing preparation reuses the same guarded baseline reader. Reports remain private. A controller test for selected lesson 8898984 proves no injection without confirmation, two read-only injections after confirmation, no job/receipt/package, and refusal after the tab moves to 8898985. This is mocked controller verification, not live acceptance. Full regression: 174 passed, 0 failed; package graph and existing transfer/recovery tests pass.
+
+Minimum user action: reload the unpacked native extension to 0.10.4; from the selected 8898984 editor open a fresh reusable lesson transfer screen; confirm its practice URL/permission; leave the package picker empty and click Read baseline only and download report. The resulting reviewed-transfer-*.json in Downloads can be read locally to scope the next test without copying private JSON into chat. Preserve current unsaved edits if the report flags them. Do not click save or cleanup. Agent browser control remains unavailable, so this user-operated read is the genuine access blocker.
+
+This continuation is recorded in the local commit titled Add package-free selected practice baseline export. No push or automation revision change was performed. The prior delivery commit is 8f41284. The accepted saved lesson 8898985 and its private evidence remain unchanged. Full automatic live companion acceptance and live cleanup remain unverified.
+
 # Delivery hardening — November 20, 2026 (companion 0.10.3)
 
 This entry is current and supersedes contradictory pending-status wording in historical sections below. Work was performed only in the saved GitHub checkout. The accepted lesson and private live evidence were not accessed or changed. No live save, live cleanup, installed-extension reload or automation revision change was performed.

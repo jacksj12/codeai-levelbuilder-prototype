@@ -22,13 +22,18 @@ export function assertCleanSavedBaseline(editor,saved){
  }
 }
 
-export async function prepareTransfer(pkg,io){
- const problems=packageProblems(pkg);if(problems.length)throw Error(problems.join(' '));
- const source=clone(pkg),fresh=await io.readSaved();
+export async function readTransferBaseline(io){
+ const fresh=await io.readSaved();
  const editor=await io.bridge({action:'read'});
  await io.checkpoint({status:'baseline-read',initialCapture:editor,freshSaved:fresh.lesson,stagingStarted:false});
  if(canonical(editor.saved)!==canonical(fresh.lesson))throw Error('The open editor has an older saved baseline. Preserve any unsaved edits, then reopen the editor and compare again.');
  assertCleanSavedBaseline(editor,fresh.lesson);
+ return {fresh,editor};
+}
+
+export async function prepareTransfer(pkg,io){
+ const problems=packageProblems(pkg);if(problems.length)throw Error(problems.join(' '));
+ const source=clone(pkg),{editor}=await readTransferBaseline(io);
  await io.checkpoint({status:'before-rehearsal',initialCapture:editor});
  const rehearsal=await runAcceptedNativeRehearsal(io.bridge,source,{onProgress:io.onProgress,onCheckpoint:point=>io.checkpoint({status:'rehearsing',stage:point})});
  await io.checkpoint({status:rehearsal.status,stage:rehearsal});

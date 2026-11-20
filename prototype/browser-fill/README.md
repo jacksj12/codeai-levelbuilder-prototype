@@ -6,10 +6,14 @@ The **Lesson Studio native companion** lives in the parent `prototype` folder. I
 
 1. Run the local workspace with `npm start` from `prototype` when you need local editing/export or the isolated demo. The unpacked extension itself loads files from this checkout.
 2. In Edge or Chrome extension management, enable Developer mode and choose **Load unpacked**. Select the **parent `prototype` directory**, containing `manifest.json`; do not select `browser-fill` or `api-companion`.
-3. When updating this checkout, reload the installed extension and reopen its transfer screen. Current version: **0.10.3**. Preserve/download any current evidence first. No private review package or save authorization ships in this clone.
+3. When updating this checkout, reload the installed extension and reopen its transfer screen. Current version: **0.10.4**. Preserve/download any current evidence first. No private review package or save authorization ships in this clone.
 4. Sign in to Level Builder normally and open the exact owned practice lesson's canonical editor: `https://levelbuilder-studio.code.org/lessons/ID/edit`.
 
 No API key, copied credentials or additional host permissions are needed. Official source lessons remain read-only. A local package approval is not approval to save remotely.
+
+## Read a selected practice baseline without a package
+
+Open the selected canonical editor, launch **Open reusable lesson transfer** from its companion, confirm the practice URL and permission, then choose **Read baseline only and download report**. Leave the package picker empty. It reads fresh saved data and the current editor and downloads private evidence; it does not stage changes, check unit-level usage or save. Stale baselines, unsaved edits and blockers remain visible in the report. The old popup read button stays restricted to its historical assigned lesson; use this new screen for another selected practice lesson.
 
 ## Prepare a reusable transfer
 
