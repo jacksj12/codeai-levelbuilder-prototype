@@ -1,3 +1,7 @@
+# Preparation diagnostic fix — 0.10.1
+
+The user reported switching to the editor with a disabled report button. Their screenshot showed the clean-saved-baseline refusal before rehearsal, not a hung save. Root mismatch remains unknown. Preparation now retains read-only baseline evidence before validation, reports exact differing normalized field paths or capture blockers, enables report download on checkpoint, retains the error in exported evidence, and returns focus to the review tab if the editor remains active. All 162 tests pass. User must reload the companion/review page (not the lesson editor), run preparation again, and retain the automatically downloaded report. No live changes were staged by the reported failed attempt; no save was attempted.
+
 # Latest checkpoint — activity transfer
 
 Companion 0.10.0 adds append-only activities and callouts on existing sections; 160 automated tests pass. Native-shaped browser restoration passed with zero lesson saves. Combined browser simulation saved once, verified, reloaded and rechecked without resend. See prototype/ACTIVITY-TRANSFER-ACCEPTANCE.md. The selected live lesson is now cleared; private scoped package and baseline are in the original Documents/ChatGPT workspace. The user confirmed they can reload/open the Edge companion. Fresh native preparation and unit-use checks are still required; no save-ready live review or live approval exists yet. Do not confuse the synthetic preflight with native rehearsal.

@@ -111,12 +111,12 @@ async function makeIO(){
  const prefix=native?'native-approved-save-':key+'-receipt-';
  return {...adapter,onProgress:status,loadReceipt:async digest=>readTransferRecord(localStorage,prefix+digest),
   persist:async(digest,receipt)=>{writeTransferRecord(localStorage,prefix+digest,receipt);if(receipt.kind==='test-link-cleanup-receipt')state.cleanupReceipt=receipt;else state.receipt=receipt;persist();},
-  checkpoint:async point=>{state.checkpoint=point;state.needsRecovery=point.stage?.restored===false;persist();},loadCheckpoint:async()=>state.checkpoint};
+  checkpoint:async point=>{state.checkpoint=point;state.needsRecovery=point.stage?.restored===false;persist();$('download').disabled=false;},loadCheckpoint:async()=>state.checkpoint};
 }
 async function run(action){
  if(busy||startupError)return;busy=true;render();
  try{await navigator.locks.request(native?'lesson-studio-native-verification':key,{ifAvailable:true},async lock=>{if(!lock)throw Error('Another run is using this editor. Wait for it to finish.');await action();});}
- catch(error){status(error.message);if(state.checkpoint||state.receipt)downloadReport();}
+ catch(error){state.preparationError=error.message;persist();status(error.message);if(state.checkpoint||state.receipt)downloadReport();}
  finally{busy=false;render();}
 }
 $('load-demo').onclick=()=>run(async()=>{
@@ -135,9 +135,12 @@ $('package-file').onchange=()=>run(async()=>{
  state.pkg=pkg;delete state.job;$('package-name').textContent=file.name;persist();if($('practice').checked)await prepareReview();else status('Package loaded. Confirm your practice destination to automatically prepare the review.');
 });
 async function prepareReview(){
+ const ownTab=native?await chrome.tabs.getCurrent():null;
+ try{
  if(native){state.destination=selectDestination($('destination').value,$('practice').checked);state.practiceConfirmed=true;const tab=await chrome.tabs.get(state.tabId);if(tab.url!==state.destination.url||tab.discarded)throw Error('Open the exact selected editor in the original tab, then launch this screen from its companion.');await chrome.tabs.update(state.tabId,{active:true});}
  delete state.job;delete state.receipt;$('approve').checked=false;persist();io=await makeIO();
  state.job=await prepareTransfer(state.pkg,io);state.needsRecovery=false;persist();status('Review ready. Original editor restored; nothing saved. Inspect every proposed change before approving.');
+ }finally{if(ownTab?.id){try{const editor=await chrome.tabs.get(state.tabId);if(editor.active)await chrome.tabs.update(ownTab.id,{active:true});}catch{}}}
 }
 $('prepare').onclick=()=>run(prepareReview);
 $('practice').onchange=()=>{if($('practice').checked&&state.pkg&&!state.job&&!state.receipt)run(prepareReview);};

@@ -11,7 +11,9 @@ export function assertCleanSavedBaseline(editor,saved){
  }};
  const current=normalizeNativeCapture(editor),baseline=normalizeNativeCapture(snapshot);
  current.lesson.frontMatter.objectives.sort();baseline.lesson.frontMatter.objectives.sort();
- if(current.blockers.length||canonical(current.lesson)!==canonical(baseline.lesson))throw Error('The editor contains unsaved content or incomplete fields. Preserve those edits and save or discard them yourself before preparing a transfer.');
+ if(current.blockers.length)throw Error('The editor has incomplete fields: '+current.blockers.join(' ')+' No staging was attempted.');
+ const differences=[];const compare=(a,b,path=[])=>{if(canonical(a)===canonical(b))return;if(a&&b&&typeof a==='object'&&typeof b==='object'&&Array.isArray(a)===Array.isArray(b)){for(const k of new Set([...Object.keys(a),...Object.keys(b)]))compare(a[k],b[k],[...path,k]);}else differences.push(path.join(' / '));};compare(current.lesson,baseline.lesson);
+ if(differences.length)throw Error('The editor has unsaved differences at: '+differences.slice(0,8).join('; ')+(differences.length>8?'; and '+(differences.length-8)+' more':'')+'. No staging was attempted. Download the report before changing or reloading the lesson.');
  const settings={Lockable:'lockable','Has Lesson Plan':'hasLessonPlan',Assessment:'assessment','Unplugged Lesson':'unplugged',Background:'background','Creative Commons Image':'creativeCommonsLicense'};
  for(const control of editor.protection?.controls||[]){
   const key=settings[control.label];if(!key)continue;
@@ -24,6 +26,7 @@ export async function prepareTransfer(pkg,io){
  const problems=packageProblems(pkg);if(problems.length)throw Error(problems.join(' '));
  const source=clone(pkg),fresh=await io.readSaved();
  const editor=await io.bridge({action:'read'});
+ await io.checkpoint({status:'baseline-read',initialCapture:editor,freshSaved:fresh.lesson,stagingStarted:false});
  if(canonical(editor.saved)!==canonical(fresh.lesson))throw Error('The open editor has an older saved baseline. Preserve any unsaved edits, then reopen the editor and compare again.');
  assertCleanSavedBaseline(editor,fresh.lesson);
  await io.checkpoint({status:'before-rehearsal',initialCapture:editor});

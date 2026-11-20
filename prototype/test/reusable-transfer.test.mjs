@@ -67,3 +67,6 @@ test('receipt storage failure blocks the save dispatch',async()=>{
  const h=harness(),job=await approveTransfer(await prepareTransfer(h.state.pkg,h.io));h.io.persist=async()=>{throw Error('Storage unavailable');};
  await assert.rejects(executeTransfer(job,h.io),/Storage unavailable/);assert.equal(h.state.sendCount,0);
 });
+
+test('early baseline refusal retains read-only evidence and identifies the differing field',async()=>{const h=harness();h.state.editor.live.fields.teacherOverview='Outside work';let point;h.io.checkpoint=async p=>{point=clone(p)};const original=canonical(h.state.editor);await assert.rejects(prepareTransfer(h.state.pkg,h.io),/frontMatter \/ teacherOverview/);assert.equal(point.status,'baseline-read');assert.equal(point.stagingStarted,false);assert.equal(point.initialCapture.live.fields.teacherOverview,'Outside work');assert.equal(canonical(h.state.editor),original);assert.equal(h.state.sendCount,0);});
+test('incomplete native capture reports its specific blocker before any staging',async()=>{const h=harness();h.state.editor.blockers=['Missing unique section controls'];let point;h.io.checkpoint=async p=>{point=p};await assert.rejects(prepareTransfer(h.state.pkg,h.io),/Missing unique section controls/);assert.equal(point.stagingStarted,false);assert.equal(h.state.sendCount,0);});
