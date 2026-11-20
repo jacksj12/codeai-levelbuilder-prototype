@@ -1,3 +1,5 @@
+import {appendedSections,inAppendedSection,sectionPayload,stripNewSections,newSectionLink} from './reviewed-structure.mjs';
+import {savedFieldPath,liveFieldPath,fieldAt,putField,nativeFieldValue,restoreFieldProtection} from './reviewed-fields.mjs';
 import {clone,canonical,digest,validatePlan} from './transfer-core.mjs';
 import {validDestination} from './destination.mjs';
 import {normalizeNativeCapture} from './transfer-native.mjs';
@@ -27,10 +29,27 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
  const normalized=normalizeNativeCapture(staged);assert(!normalized.blockers.length,normalized.blockers.join(' '));
  assert(canonical(normalized.lesson)===canonical(plan.expectedLesson),'The staged content does not match its reviewed transfer plan.');
  assert(plan.operations.length>0,'There are no reviewed changes to save.');
- const projection=clone(staged),candidate=clone(freshSaved),changes=[];
+ const scopes=appendedSections(plan),sectionAdditions=[],candidate=clone(freshSaved),changes=[],fieldChanges=[];
+ const projection=stripNewSections(staged,scopes);
+ for(const {activityIndex:ai,sectionIndex:si} of scopes){
+  const activity=candidate.activities[ai],native=staged.live.activities[ai];
+  assert(activity&&native&&activity.id===native.id&&si>=freshSaved.activities[ai].activitySections.length&&activity.activitySections.length===si,'New sections must append to a preserved existing activity.');
+  const section=sectionPayload(native.activitySections[si],si+1);activity.activitySections.push(section);
+  sectionAdditions.push({activityIndex:ai,activityId:activity.id,sectionIndex:si,label:'Activity '+(ai+1)+' / New section '+(si+1),section:clone(section)});
+ }
  for(const op of plan.operations){
-  const p=op.path;
-  assert(op.kind==='set'&&p.length===5&&p[0]==='activities'&&p[2]==='sections'&&p[4]==='progression'&&op.before===null,'This save-review version only supports the verified missing-level additions. Other changes need their own save mapping.');
+  if(inAppendedSection(op,scopes))continue;
+  const p=op.path,nativePath=savedFieldPath(op);
+  if(nativePath){
+   const livePath=liveFieldPath(op),before=fieldAt(freshSaved,nativePath),after=nativeFieldValue(op);
+   assert(canonical(fieldAt(normalized.lesson,op.path))===canonical(op.after),'The staged native field differs from the reviewed value.');
+   if(nativePath.length>1){
+    for(const length of nativePath.length===3?[2]:[2,4])assert(fieldAt(freshSaved,nativePath.slice(0,length))?.id===fieldAt(staged.live,nativePath.slice(0,length))?.id,'A reviewed native record identity changed.');
+   }
+   putField(candidate,nativePath,after);putField(projection.live,livePath,fieldAt(initial.live,livePath));restoreFieldProtection(projection.protection,initial.protection,nativePath);
+   fieldChanges.push({label:op.label,path:clone(nativePath),before:clone(before),after:clone(after)});continue;
+  }
+  assert(op.kind==='set'&&p.length===5&&p[0]==='activities'&&p[2]==='sections'&&p[4]==='progression'&&op.before===null,'This save review supports existing teaching fields and missing-level additions. Other records and collections need their own save mapping.');
   const before=sourceSection(initial.live,p),after=sourceSection(staged.live,p),saved=sourceSection(candidate,p);
   assert(before&&after&&saved&&before.id===saved.id&&after.id===saved.id,'A destination activity-section identity changed.');
   assert(!records(before.scriptLevels,'original level links').length&&!records(saved.scriptLevels,'saved level links').length,'Replacing an existing saved progression is not supported.');
@@ -54,11 +73,11 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
  const expectedCounts={activities:normalized.lesson.activities.length,sections:sections.length,callouts:sections.reduce((n,s)=>n+s.callouts.length,0),resources:normalized.lesson.resources.length,levels:levels.length,assessments:levels.filter(l=>l.assessment).length};
  const review={schemaVersion:1,kind:'native-save-review',status:'ready-for-review',createdAt:now,expiresAt:now+10*60*1000,
   destination:clone(plan.destination),remoteWrites:false,saveAllowed:false,requiresUserApproval:true,requiresRestaging:true,
-  baselineDigest:await digest(freshSaved),stagedDigest:await digest(staged),rehearsalPlanId:plan.id,changes,
+  baselineDigest:await digest(freshSaved),stagedDigest:await digest(staged),rehearsalPlanId:plan.id,changes,fieldChanges,sectionAdditions,
   request:{method:'PUT',url:'https://levelbuilder-studio.code.org/lessons/'+plan.destination.id,contentType:'application/json;charset=UTF-8',body:JSON.stringify(payload)},
   baseline:clone(freshSaved),baselineNativeProtection:clone(initial.protection),expectedLesson:clone(plan.expectedLesson),expectedCounts,
   preserved:{activityIds:freshSaved.activities.map(a=>a.id),sectionIds:freshSaved.activities.flatMap(a=>a.activitySections.map(s=>s.id)),resourceKeys:JSON.parse(payload.resources),vocabularyKeys:JSON.parse(payload.vocabularies)},
-  limitation:'Review only until explicitly approved. Existing-level additions have prior live acceptance on the assigned playground; other selected destinations require their own saved verification.'};
+  limitation:'Review only until explicitly approved. Existing-level additions have prior live acceptance on the assigned playground; Teaching-field and new-section saves are locally tested, not live-accepted; other selected destinations require their own saved verification.'};
  review.id=await digest(review);return review;
 }
 
@@ -85,6 +104,13 @@ export async function validateStagedSaveReview(review,capture){
  const normalized=normalizeNativeCapture(capture);assert(!normalized.blockers.length,normalized.blockers.join(' '));
  assert(canonical(comparableLesson(normalized.lesson))===canonical(comparableLesson(review.expectedLesson)),'The current staged editor differs from the approved result.');
  const protection=clone(capture.protection),requested=JSON.parse(JSON.parse(review.request.body).activities);
+ for(const change of review.fieldChanges||[])restoreFieldProtection(protection,review.baselineNativeProtection,change.path);
+ for(const change of [...(review.sectionAdditions||[])].reverse()){
+  const ai=change.activityIndex,si=change.sectionIndex,activity=capture.live.activities[ai];
+  assert(activity?.id===change.activityId&&canonical(sectionPayload(activity.activitySections[si],si+1))===canonical(change.section),'A staged new section differs from its reviewed content.');
+  assert(protection.unmanagedActivities[ai].activitySections.length===si+1,'Unexpected new-section ordering.');
+  protection.unmanagedActivities[ai].activitySections.pop();
+ }
  for(const change of review.changes){
   const ai=capture.live.activities.findIndex(a=>a.activitySections.some(s=>s.id===change.sectionId));
   assert(ai>=0,'A reviewed section is missing from the current editor.');
@@ -114,7 +140,26 @@ export async function verifySavedReadback(review,saved){
  const normalized=normalizeNativeCapture(capture);
  if(normalized.blockers.length)mismatches.push(...normalized.blockers);
  if(canonical(comparableLesson(normalized.lesson))!==canonical(comparableLesson(review.expectedLesson)))mismatches.push('Saved lesson content, ordering or assessment flags differ from the reviewed result.');
- const projection=clone(saved),newIds=new Set();
+ const projection=clone(saved),newIds=new Set(review.baseline.activities.flatMap(a=>a.activitySections.flatMap(s=>s.scriptLevels.map(sl=>String(sl.id)))));
+ const sectionIds=new Set(review.baseline.activities.flatMap(a=>a.activitySections.map(s=>String(s.id))));
+ for(const change of [...(review.sectionAdditions||[])].reverse()){
+  const activity=projection.activities[change.activityIndex],section=activity?.activitySections[change.sectionIndex];
+  if(!section||activity.id!==change.activityId||activity.activitySections.length!==change.sectionIndex+1){mismatches.push('A new section is missing, reordered or duplicated.');continue;}
+  const id=String(section.id),raw=clone(section);delete raw.id;
+  if(!/^[1-9]\d*$/.test(id)||!Number.isSafeInteger(Number(id))||sectionIds.has(id))mismatches.push('A new section has a missing, reused or duplicated saved identity.');
+  sectionIds.add(id);
+  if(!Array.isArray(raw.scriptLevels))mismatches.push('New-section saved links are incomplete.');
+  else raw.scriptLevels=raw.scriptLevels.map((sl,index)=>{
+   const id=String(sl.id);if(!/^[1-9]\d*$/.test(id)||!Number.isSafeInteger(Number(id))||newIds.has(id))mismatches.push('A new-section association has a missing, reused or duplicate identity.');else newIds.add(id);
+   try{return newSectionLink(sl,index+1,{persisted:true});}catch(error){mismatches.push(error.message);return sl;}
+  });
+  if(canonical(raw)!==canonical(change.section))mismatches.push('A new section or its callouts differ from the exact reviewed structure.');
+  activity.activitySections.pop();
+ }
+ for(const change of review.fieldChanges||[]){
+  if(canonical(fieldAt(saved,change.path))!==canonical(change.after))mismatches.push('A saved teaching field differs from its exact reviewed value.');
+  try{putField(projection,change.path,change.before);}catch{mismatches.push('A reviewed native field is missing.');}
+ }
  for(const change of review.changes){
   let found;
   for(const activity of projection.activities||[])for(const section of activity.activitySections||[])if(section.id===change.sectionId)found=section;
@@ -127,14 +172,14 @@ export async function verifySavedReadback(review,saved){
   }
   const original=review.baseline.activities.flatMap(a=>a.activitySections).find(s=>s.id===change.sectionId);found.scriptLevels=clone(original.scriptLevels);found.progressionName=original.progressionName;
  }
- if(canonical(projection)!==canonical(review.baseline))mismatches.push('An existing record, setting or association changed outside the reviewed additions.');
+ if(canonical(projection)!==canonical(review.baseline))mismatches.push('An existing record, setting or association changed outside the reviewed changes.');
  const passed=mismatches.length===0,baselineUnchanged=canonical(saved)===canonical(review.baseline);
  return {passed,mismatches:[...new Set(mismatches)],saved:passed?true:baselineUnchanged?false:null,baselineUnchanged,saveRetried:false};
 }
 
 export function buildSavedLessonPayload(freshSaved,candidate,originalLessonJson){
  const payload={};
- for(const key of [...ROOT_TEXT,...ROOT_SETTINGS]){assert(Object.prototype.hasOwnProperty.call(freshSaved,key),'Saved field '+key+' is missing.');payload[key]=clone(freshSaved[key]);}
+ for(const key of [...ROOT_TEXT,...ROOT_SETTINGS]){assert(Object.prototype.hasOwnProperty.call(freshSaved,key),'Saved field '+key+' is missing.');payload[key]=clone(ROOT_TEXT.includes(key)?candidate[key]:freshSaved[key]);}
  const standards=records(freshSaved.standards,'standards'),opportunity=records(freshSaved.opportunityStandards,'opportunity standards'),expressions=records(freshSaved.programmingExpressions,'code definitions');
  for(const item of [...standards,...opportunity])assert(typeof item.frameworkShortcode==='string'&&typeof item.shortcode==='string','A saved standard mapping is incomplete.');
  for(const item of expressions)assert(typeof item.programmingEnvironmentName==='string'&&typeof item.key==='string','A saved code-definition mapping is incomplete.');

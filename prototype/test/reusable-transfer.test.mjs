@@ -51,9 +51,9 @@ test('existing unsaved content and settings are preserved and block preparation'
   const h=harness();mutate(h);const before=canonical(h.state.editor);await assert.rejects(prepareTransfer(h.state.pkg,h.io),/unsaved/);assert.equal(canonical(h.state.editor),before);assert.equal(h.state.sendCount,0);
  }
 });
-test('different destination content blocks the entire supported-save rehearsal before changing any field',async()=>{
+test('different teaching content is rehearsed, restored, and included in exact review without saving',async()=>{
  const h=harness();h.state.pkg.lesson.sections[0].body='New guidance';h.state.pkg.baseline=clone(h.state.pkg.lesson);
- const before=canonical(h.state.editor);await assert.rejects(prepareTransfer(h.state.pkg,h.io),/unresolved|separate review/);assert.equal(canonical(h.state.editor),before);
+ const before=canonical(h.state.editor),job=await prepareTransfer(h.state.pkg,h.io);assert.equal(job.review.fieldChanges[0].after,'New guidance');assert.equal(canonical(h.state.editor),before);assert.equal(h.state.sendCount,0);
 });
 test('a changed saved baseline after preparation cannot be approved into a different request',async()=>{
  const h=harness(),job=await approveTransfer(await prepareTransfer(h.state.pkg,h.io));h.state.server.name='Outside saved edit';await assert.rejects(executeTransfer(job,h.io),/changed/);assert.equal(h.state.sendCount,0);

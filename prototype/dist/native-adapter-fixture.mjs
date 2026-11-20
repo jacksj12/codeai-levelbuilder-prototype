@@ -69,6 +69,9 @@ let createdSequence=0;
 function decorateSection(area,ai,si){
  const root=area.parentElement;
  const trash=document.createElement('i');trash.className='fa-trash';trash.dataset.removeSection=si;trash.dataset.ai=ai;trash.textContent='Remove temporary section';root.firstElementChild.append(trash);
+ for(const [ci,tip]of current.activities[ai].activitySections[si].tips.entries()){
+  const span=document.createElement('span');span.setAttribute('data-tip','true');span.setAttribute('data-for','fixture-tip-'+ai+'-'+si+'-'+ci);const icon=document.createElement('i');icon.textContent='Edit '+tip.type;icon.dataset.editTip=ci;icon.dataset.ai=ai;icon.dataset.si=si;span.append(icon);root.append(span);
+ }
  for(const text of ['Callout','Activity Section']){const button=document.createElement('button');button.type='button';button.textContent=text;button.dataset.ai=ai;button.dataset.si=si;if(text==='Activity Section')button.className='add-activity-section';else button.dataset.callout='true';root.append(button);}
 }
 for(const [ai,card]of [...document.querySelectorAll('.uitest-activity-card')].entries())for(const [si,area]of [...card.querySelectorAll('textarea')].entries())decorateSection(area,ai,si);
@@ -79,6 +82,12 @@ function fixtureStructuralEvent(event){
   current.activities[ai].activitySections.push({key,name:'',duration:'',description:'',remarks:false,tips:[],scriptLevels:[],progressionName:''});
   const root=document.createElement('div');root.className='native-section';root.innerHTML='<div class="section-header"><label><span>Title:</span><input data-ai="'+ai+'" data-si="'+si+'" data-sk="name" value=""><span>Duration:</span><input data-ai="'+ai+'" data-si="'+si+'" data-sk="duration" value=""></label><label>Remarks<input type="checkbox" data-ai="'+ai+'" data-si="'+si+'" data-sk="remarks"></label></div><textarea data-ai="'+ai+'" data-si="'+si+'" data-sk="description"></textarea>';
   button.parentElement.after(root);decorateSection(root.querySelector('textarea'),ai,si);sync();
+ }
+ if(event.type==='click'&&button.dataset.editTip!==undefined){
+  const ai=Number(button.dataset.ai),si=Number(button.dataset.si),ci=Number(button.dataset.editTip),tip=current.activities[ai].activitySections[si].tips[ci],modal=document.createElement('div');modal.className='modal-content';
+  modal.innerHTML='<h2>Add Callout</h2><select>'+['teachingTip','contentCorner','discussionGoal','assessmentOpportunity','ethicsOpportunity'].map(t=>'<option value="'+t+'">'+t+'</option>').join('')+'</select><textarea name="callout"></textarea><button type="button">Save and close</button>';
+  modal.querySelector('select').value=tip.type;modal.querySelector('textarea').value=tip.markdown;
+  modal.querySelector('button').onclick=()=>{tip.type=modal.querySelector('select').value;tip.markdown=modal.querySelector('textarea').value;modal.remove();sync();};button.parentElement.append(modal);
  }
  if(event.type==='click'&&button.dataset.callout){
   const ai=Number(button.dataset.ai),si=Number(button.dataset.si),modal=document.createElement('div');modal.className='modal-content';modal.innerHTML='<h2>Add Callout</h2><select>'+['teachingTip','contentCorner','discussionGoal','assessmentOpportunity','ethicsOpportunity'].map(t=>'<option value="'+t+'">'+t+'</option>').join('')+'</select><textarea name="callout"></textarea><button type="button">Save and close</button>';
@@ -131,3 +140,9 @@ function updateFixtureLevelPreview(){
  if(!table){table=document.createElement('table');table.id='fixture-level-preview';document.querySelector('#edit-container').append(table);}
  table.innerHTML='<tbody>'+groups.map(s=>'<tr><td><a class="uitest-ProgressPill">'+s.scriptLevels.length+'</a></td><td>'+esc(s.name)+'</td></tr>').join('')+'</tbody>';
 }
+
+const calloutButton=document.createElement('button');calloutButton.id='fixture-edit-callout';calloutButton.textContent='Check existing callout edit and restore';document.querySelector('.actions').append(calloutButton);
+calloutButton.onclick=async()=>{
+ calloutButton.disabled=true;
+ try{const lesson=clone(draft);lesson.sections[0].callouts[0]={type:'Ethics Opportunity',body:'Temporary reviewed callout text.'};const pkg={schemaVersion:1,status:'approved-locally',sandbox:SANDBOX,lesson,baseline:clone(lesson),conflicts:[],engineeringFixture:true};const report=await runAcceptedNativeRehearsal(bridge,pkg);$('#fixture-results').textContent=JSON.stringify({status:report.status,restored:report.restored,checksPassed:report.checksPassed,saved:report.saved,saveControlsInvoked:savedCalls,error:report.error,restorationError:report.restorationError},null,2);}catch(error){$('#fixture-results').textContent=error.message;}finally{calloutButton.disabled=false;}
+};

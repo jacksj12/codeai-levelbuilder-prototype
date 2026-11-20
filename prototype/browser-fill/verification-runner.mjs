@@ -1,3 +1,4 @@
+import {reviewedLevelGroups} from '../dist/reviewed-structure.mjs';
 import {buildSaveReview} from '../dist/save-review.mjs';
 import {runApprovedSave} from '../dist/approved-save.mjs';
 import {readAssignedLevelUsage,findUnitLevelConflicts} from '../dist/native-level-usage.mjs';
@@ -65,14 +66,14 @@ try{
   const response=await fetch(chrome.runtime.getURL('browser-fill/local-save-job.json'),{cache:'no-store'});
   if(!response.ok)throw Error('The approved local save job is unavailable.');
   const job=await response.json();
-  document.getElementById('save-review').textContent=job.review.changes.map(c=>c.section+': '+c.addLevels.map(l=>l.name+(l.assessment?' (assessment)':'')).join(', ')).join('\n');
+  document.getElementById('save-review').textContent=(job.review.sectionAdditions||[]).map(c=>c.label+'\nAppend: '+JSON.stringify(c.section)).join('\n\n')+'\n'+(job.review.fieldChanges||[]).map(c=>c.label+'\nBefore: '+JSON.stringify(c.before)+'\nAfter: '+JSON.stringify(c.after)).join('\n\n')+'\n'+job.review.changes.map(c=>c.section+': '+c.addLevels.map(l=>l.name+(l.assessment?' (assessment)':'')).join(', ')).join('\n');
   const reader=createNativeTransport(async encoded=>{const [result]=await chrome.scripting.executeScript({target:{tabId:run.tabId},injectImmediately:true,func:readAssignedLesson,args:[encoded]});return result?.result;});
   const pkg=await(await fetch(chrome.runtime.getURL('browser-fill/accepted-rehearsal.json'),{cache:'no-store'})).json();
   evidence=await runApprovedSave(job,{
    readSaved:()=>reader({action:'read',returnRaw:true}),readEditor:()=>bridge({action:'read'}),send:request=>bridge(request),
    checkUsage:async review=>{
     const readUsage=createNativeTransport(async encoded=>{const [result]=await chrome.scripting.executeScript({target:{tabId:run.tabId},injectImmediately:true,func:readAssignedLevelUsage,args:[encoded]});return result?.result;});
-    const usages=[];for(const level of review.changes.flatMap(c=>c.addLevels))usages.push(await readUsage({action:'read',levelId:level.levelId,name:level.name}));
+    const usages=[];for(const level of reviewedLevelGroups(review).flatMap(c=>c.addLevels))usages.push(await readUsage({action:'read',levelId:level.levelId,name:level.name}));
     return findUnitLevelConflicts(review,usages);
    },
    recover:async()=>{
@@ -148,7 +149,7 @@ try{
  report.textContent=JSON.stringify({status:evidence.status,fields:evidence.fields?.length||0,restored:evidence.restored,saved:false,structure:evidence.structure?{status:evidence.structure.status,callouts:evidence.structure.callouts,restored:evidence.structure.restored}:null,levels:evidence.levels?{status:evidence.levels.status,counts:evidence.levels.counts,restored:evidence.levels.restored}:null,skipped:evidence.skipped,error:evidence.error,restorationError:evidence.restorationError},null,2);
  status.textContent=evidence.status==='passed-and-restored'?(evidence.saveReview?.status==='ready-for-review'?'Save preview ready. Original values remain restored. No Save performed. Report downloaded.':evidence.saveReview?.status==='blocked'?'Rehearsal passed and restored. Save preview blocked: '+evidence.saveReview.error:'Automatic check passed. All original values restored. No Save performed. Report downloaded.'):'Verification stopped. '+(evidence.error||'')+' '+(evidence.restorationError||(evidence.restored?'Original values restored.':'Restoration was not confirmed.'));
  const reviewBox=document.getElementById('save-review');
- if(reviewBox)reviewBox.textContent=evidence.saveReview?.status==='ready-for-review'?evidence.saveReview.changes.map(change=>'Add '+change.addLevels.length+' existing level link(s) to '+change.section+' ('+change.addLevels.filter(level=>level.assessment).length+' assessment).').join('\n')+'\nAll existing lesson content and settings are retained. A live save remains disabled pending explicit approval and a fresh restaging check.':evidence.saveReview?.error||'Not prepared.';
+ if(reviewBox)reviewBox.textContent=evidence.saveReview?.status==='ready-for-review'?(evidence.saveReview.sectionAdditions||[]).map(c=>c.label+'\nAppend: '+JSON.stringify(c.section)).join('\n\n')+'\n'+(evidence.saveReview.fieldChanges||[]).map(c=>c.label+'\nBefore: '+JSON.stringify(c.before)+'\nAfter: '+JSON.stringify(c.after)).join('\n\n')+'\n'+evidence.saveReview.changes.map(change=>'Add '+change.addLevels.length+' existing level link(s) to '+change.section+' ('+change.addLevels.filter(level=>level.assessment).length+' assessment).').join('\n')+'\nUnlisted lesson content and settings are retained. A live save remains disabled pending explicit approval and a fresh restaging check.':evidence.saveReview?.error||'Not prepared.';
  download.hidden=false;saveReport();
  if(!evidence.restored){
   continuation.textContent='Stop guarded recovery checks on tested updates';

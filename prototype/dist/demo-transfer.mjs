@@ -1,8 +1,9 @@
+import {liveFieldPath,putField,nativeFieldValue,protectedFieldPath,savedFieldPath} from './reviewed-fields.mjs';
 import {generate,SANDBOX} from './core.mjs';
 import {clone,canonical,digest} from './transfer-core.mjs';
 
 // Synthetic browser/server data. No authentication or remote writer exists here.
-export function createDemo(source){
+export function createDemo(source,{teaching=false,structure=false,complete=false}={}){
  const lesson=generate(source),destination={id:9000001,url:'https://levelbuilder-studio.code.org/lessons/9000001/edit'};
  const tips={'Teaching Tip':'teachingTip','Assessment Opportunity':'assessmentOpportunity','Content Corner':'contentCorner','Discussion Goal':'discussionGoal','Ethics Opportunity':'ethicsOpportunity'};
  const saved={id:destination.id,name:'Demo practice lesson — AI Lab',overview:lesson.frontMatter.teacherOverview,studentOverview:lesson.frontMatter.studentOverview,purpose:lesson.frontMatter.purpose,preparation:lesson.frontMatter.preparation,assessmentOpportunities:lesson.frontMatter.assessmentOpportunities,
@@ -14,6 +15,16 @@ export function createDemo(source){
  const capture={schemaVersion:1,kind:'native-dom-capture',readerVersion:'native-scalars-v1',destination,saved:clone(saved),blockers:[],remoteWrites:false,
  live:{fields,activities:clone(saved.activities),objectives:clone(saved.objectives),resources:lesson.resources,vocabularies:clone(saved.vocabularies)},
  protection:{bootstrap:clone(saved),unmanagedActivities:unmanaged,objectives:clone(saved.objectives),resources:lesson.resources,vocabularies:clone(saved.vocabularies),controls:[],otherTables:[]}};
+ if(teaching){
+  lesson.frontMatter.preparation='Prepare two contrasting examples and a place for students to record evidence.';
+  lesson.activities[0].title='Investigate model decisions';lesson.activities[0].duration=12;
+  lesson.sections[0].body='Ask students to compare the examples.\n\nDiscuss: **What evidence supports your prediction?**';
+ }
+ if(structure)lesson.sections.push({id:'demo-new-reflection',activityId:lesson.activities[0].id,title:'Evidence reflection',body:'Invite students to explain what changed their prediction.',duration:4,remarks:true,callouts:Object.keys(tips).map(type=>({type,body:'Sample '+type+' for the reflection.'})),progression:null});
+ if(structure&&complete){
+  const donor=lesson.sections.find(s=>s.progression),added=lesson.sections.at(-1);added.progression=clone(donor.progression);added.progression.title='Reflection level';donor.progression=null;
+  lesson.sections[0].callouts[0]={type:'Ethics Opportunity',body:'Ask whose perspective is missing from the examples.'};
+ }
  const names=[...new Set(lesson.sections.flatMap(s=>s.progression?.levels.map(l=>l.key)||[]))];
  return {destination,pkg:{schemaVersion:1,status:'approved-locally',sandbox:SANDBOX,lesson,baseline:clone(lesson),conflicts:[]},server:saved,editor:capture,mappings:names.map((key,i)=>({key,verified:true,destinationLevelId:700+i})),sendCount:0};
 }
@@ -32,11 +43,26 @@ export function demoAdapter(state,persist){
    if(request.action==='save-approved-review'){
     const body=JSON.parse(request.review.request.body);
     if(canonical(JSON.parse(body.originalLessonData))!==canonical(state.server))throw Error('Demo saved baseline changed.');
-    state.server.activities=JSON.parse(body.activities);let id=10000;
-    for(const a of state.server.activities)for(const s of a.activitySections)for(const sl of s.scriptLevels)sl.id=++id;
+    state.server.activities=JSON.parse(body.activities);
+    for(const key of ['name','overview','studentOverview','purpose','preparation','assessmentOpportunities'])state.server[key]=body[key];let id=10000,sectionId=20000;
+    for(const a of state.server.activities)for(const s of a.activitySections)if(s.id==null)s.id=++sectionId;
+    for(const a of state.server.activities)for(const s of a.activitySections)for(const sl of s.scriptLevels)if(sl.id==null)sl.id=++id;
     state.sendCount++;persist();return {outcome:'response-received',ok:true,httpStatus:200,simulated:true};
    }
    const op=request.operation,ai=op.path[1],si=op.path[3];
+   if(request.action==='set-scalar'){const value=nativeFieldValue(op);putField(state.editor.live,liveFieldPath(op),value);const p=protectedFieldPath(savedFieldPath(op));if(p)putField(state.editor.protection,p,value);persist();return clone(state.editor);}
+   if(request.action==='append-section'){
+    const key='activitySection-'+(state.sectionCounter=(state.sectionCounter||0)+1),section={key,name:'',description:'',duration:null,remarks:false,tips:[],scriptLevels:[]};
+    state.editor.live.activities[ai].activitySections.push(section);state.editor.protection.unmanagedActivities[ai].activitySections.push({key,tips:[],scriptLevels:[]});persist();return clone(state.editor);
+   }
+   if(request.action==='remove-created-section'){
+    const sections=state.editor.live.activities[ai].activitySections;if(si!==sections.length-1||sections[si].key!==op.createdKey||sections[si].id!=null)throw Error('Unowned demo section.');
+    sections.pop();state.editor.protection.unmanagedActivities[ai].activitySections.pop();persist();return clone(state.editor);
+   }
+   if(request.action==='append-callout'){
+    const types={'Teaching Tip':'teachingTip','Content Corner':'contentCorner','Discussion Goal':'discussionGoal','Assessment Opportunity':'assessmentOpportunity','Ethics Opportunity':'ethicsOpportunity'},tip={key:'tip-'+(state.tipCounter=(state.tipCounter||0)+1),type:types[op.after.type],markdown:op.after.body};
+    state.editor.live.activities[ai].activitySections[si].tips.push(tip);state.editor.protection.unmanagedActivities[ai].activitySections[si].tips.push(clone(tip));persist();return clone(state.editor);
+   }
    for(const activities of [state.editor.live.activities,state.editor.protection.unmanagedActivities]){
     const section=activities[ai].activitySections[si];
     if(request.action==='append-progression'){

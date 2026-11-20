@@ -41,9 +41,9 @@ export async function runApprovedSave(job,{readSaved,readEditor,checkUsage,stage
  }
  if(!sameEditor(current,rehearsal.initialCapture))throw Error('The editor changed since rehearsal. No save was sent.');
  await checkpoint({status:'before-staging',review,initialCapture:clone(current)});
- onProgress('Staging the approved level links in the selected lesson.');
+ onProgress('Staging the approved changes in the selected lesson.');
  const staged=await stage();
- if(staged.status!=='staged-unsaved'||!staged.checksPassed)throw Error(staged.error||'Approved links could not be staged.');
+ if(staged.status!=='staged-unsaved'||!staged.checksPassed)throw Error(staged.error||'Approved changes could not be staged.');
  await checkpoint({status:'staged-unsaved',review,stage:staged});
  await validateStagedSaveReview(review,staged.stagedCapture);
  const latest=await readSaved();await validateSaveReview(review,{freshSaved:latest.lesson});
@@ -52,7 +52,7 @@ export async function runApprovedSave(job,{readSaved,readEditor,checkUsage,stage
  const ready=await readEditor();await validateStagedSaveReview(review,ready);
  receipt={schemaVersion:1,kind:'approved-native-save-receipt',requestDigest,...(attemptId?{attemptId,priorAttemptedAt:job.previousAttempt.attemptedAt}:{}),status:'dispatching',attempted:true,saveRetried:false,review,restorePoint:clone(latest),stagedCapture:ready,approval:clone(approval),attemptedAt:new Date().toISOString()};
  await persist(receiptKey,receipt);
- onProgress('Saving the approved level links once, then reading the saved lesson back.');
+ onProgress('Saving the approved changes once, then reading the saved lesson back.');
  try{receipt.dispatch=await send({action:'save-approved-review',mode:'explicit-approved-save',review,approval,expectedCaptureDigest:await digest(ready)});}
  catch(error){receipt.dispatch={outcome:'unknown',error:error.message};}
  await persist(receiptKey,receipt);

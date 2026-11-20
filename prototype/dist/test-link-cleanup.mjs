@@ -1,17 +1,19 @@
+import {reviewedLevelGroups} from './reviewed-structure.mjs';
 import {clone,canonical,digest} from './transfer-core.mjs';
 import {verifySavedReadback,buildSavedLessonPayload,saveRequestDigest} from './save-review.mjs';
 import {assertCleanSavedBaseline} from './reusable-transfer.mjs';
 // Planning only: never deletes level records, sends requests, or changes the editor.
 export async function planTestLinkCleanup(receipt,freshSaved){
  if(receipt?.kind!=='approved-native-save-receipt'||receipt.status!=='saved-and-verified'||!receipt.attempted||!receipt.verification?.passed)throw Error('Cleanup needs a verified saved test receipt.');
- const review=receipt.review;
+ const review=receipt.review;if(!reviewedLevelGroups(review).length)throw Error('This transfer added no test links to clean up. Teaching changes are retained.');
  const verified=await verifySavedReadback(review,receipt.readback);
  if(!verified.passed)throw Error('The receipt does not prove the saved test links.');
  if(freshSaved?.id!==review.destination.id)throw Error('Cleanup destination differs from the test receipt.');
  const result=clone(freshSaved),removals=[];
- for(const change of review.changes){
+ for(const change of reviewedLevelGroups(review)){
+  if(change.newSection){const activity=receipt.readback.activities[change.activityIndex];if(activity.id!==change.activityId)throw Error('The new section activity identity changed.');change.sectionId=activity.activitySections[change.sectionIndex].id;}
   const find=lesson=>lesson.activities.flatMap(a=>a.activitySections).find(s=>s.id===change.sectionId);
-  const before=find(review.baseline),recorded=find(receipt.readback),current=find(freshSaved),target=find(result);
+  const before=change.newSection?{scriptLevels:[],progressionName:null}:find(review.baseline),recorded=find(receipt.readback),current=find(freshSaved),target=find(result);
   if(!before||!recorded||!current||before.scriptLevels.length)throw Error('Cleanup requires a recorded originally empty progression.');
   if(canonical(current.scriptLevels)!==canonical(recorded.scriptLevels)||current.progressionName!==recorded.progressionName)throw Error('The test links changed after saving. Cleanup needs a new review.');
   if(recorded.scriptLevels.length!==change.addLevels.length)throw Error('The recorded link ownership is incomplete.');

@@ -90,11 +90,15 @@ export async function nativeEditorBridge(request={action:'read'}){
    const source=review.sourceReceipt,sourceReview=source?.review,sourceCopy=structuredClone(sourceReview||{});delete sourceCopy.id;
    if(source?.status!=='saved-and-verified'||source.attempted!==true||source.verification?.passed!==true||sourceReview?.destination.id!==destination.id||await fingerprint(sourceCopy)!==sourceReview.id)throw Error('Cleanup ownership evidence is invalid.');
    const freshSaved=JSON.parse(raw),expected=structuredClone(freshSaved),seen=new Set();
-   if(!Array.isArray(review.removals)||!review.removals.length||review.removals.length!==sourceReview.changes.length)throw Error('Cleanup scope is incomplete.');
+   const groups=[...sourceReview.changes,...(sourceReview.sectionAdditions||[]).filter(c=>c.section.scriptLevels.length).map(c=>{
+    const activity=source.readback.activities[c.activityIndex];if(activity.id!==c.activityId)throw Error('Cleanup section activity changed.');
+    return {newSection:true,sectionId:activity.activitySections[c.sectionIndex].id,addLevels:c.section.scriptLevels.map(sl=>({levelId:sl.levels[0].id,assessment:sl.assessment}))};
+   })];
+   if(!Array.isArray(review.removals)||!review.removals.length||review.removals.length!==groups.length)throw Error('Cleanup scope is incomplete.');
    for(const removal of review.removals){
     if(seen.has(removal.sectionId))throw Error('Duplicate cleanup section.');seen.add(removal.sectionId);
     const find=lesson=>lesson.activities.flatMap(a=>a.activitySections).find(s=>s.id===removal.sectionId);
-    const original=find(sourceReview.baseline),recorded=find(source.readback),current=find(freshSaved),target=find(expected),change=sourceReview.changes.find(c=>c.sectionId===removal.sectionId);
+    const change=groups.find(c=>c.sectionId===removal.sectionId),original=change?.newSection?{scriptLevels:[],progressionName:null}:find(sourceReview.baseline),recorded=find(source.readback),current=find(freshSaved),target=find(expected);
     if(!original||!recorded||!current||!change||original.scriptLevels.length||stable(current.scriptLevels)!==stable(recorded.scriptLevels)||current.progressionName!==recorded.progressionName||recorded.scriptLevels.length!==change.addLevels.length)throw Error('Saved test links changed or ownership is incomplete.');
     for(const [i,link]of recorded.scriptLevels.entries())if(!link.id||link.levels?.length!==1||String(link.levels[0].id)!==String(change.addLevels[i].levelId)||Boolean(link.assessment)!==Boolean(change.addLevels[i].assessment))throw Error('Cleanup link identity differs from the saved test.');
     target.scriptLevels=structuredClone(original.scriptLevels);target.progressionName=original.progressionName;
@@ -273,6 +277,27 @@ export async function nativeEditorBridge(request={action:'read'}){
  if(await fingerprint(current)!==request.expectedCaptureDigest)throw Error('Native editor changed before the action. Nothing was filled.');
  const op=request.operation,path=op?.path;
  if(op?.kind!=='set'||!Array.isArray(path)||path.some(k=>['__proto__','prototype','constructor'].includes(k)))throw Error('Only existing scalar fields are supported.');
+ if(path.length===7&&path[0]==='activities'&&path[2]==='sections'&&path[4]==='callouts'&&[path[1],path[3],path[5]].every(n=>Number.isInteger(n)&&n>=0)&&['type','body'].includes(path[6])){
+  const types={'Teaching Tip':'teachingTip','Content Corner':'contentCorner','Discussion Goal':'discussionGoal','Assessment Opportunity':'assessmentOpportunity','Ethics Opportunity':'ethicsOpportunity'};
+  const tip=current.live.activities[path[1]]?.activitySections[path[3]]?.tips?.[path[5]],key=path[6]==='body'?'markdown':'type',before=key==='type'?types[op.before]:op.before,after=key==='type'?types[op.after]:op.after;
+  if(!tip||tip[key]!==before||typeof after!=='string'||after.length>100000)throw Error('The existing callout differs from the reviewed change.');
+  const card=document.querySelectorAll('.uitest-activity-card')[path[1]],root=card?.querySelectorAll('textarea')[path[3]]?.parentElement,icons=root?.querySelectorAll('span[data-tip][data-for] > i');
+  if(!icons||icons.length!==current.live.activities[path[1]].activitySections[path[3]].tips.length)throw Error('Existing callout controls could not be uniquely mapped.');
+  if(!icons[path[5]].getClientRects().length){
+   const headings=[...document.querySelectorAll('#edit-container h2 button')].filter(b=>b.textContent.trim()==='Activities & Levels');if(headings.length===1)headings[0].click();
+   if(card?.children[1]?.hidden)card.querySelector('.fa-chevron-right')?.click();
+  }
+  if(!icons[path[5]].getClientRects().length)throw Error('The existing callout control is hidden. No callout was changed.');
+  checkDeadline();icons[path[5]].click();await settle();
+  const modals=[...document.querySelectorAll('.modal-content')].filter(n=>n.getClientRects().length&&[...n.querySelectorAll('h2')].some(h=>h.textContent.trim()==='Add Callout'));
+  if(modals.length!==1)throw Error('The existing callout editor did not open uniquely.');
+  const modal=modals[0],selects=modal.querySelectorAll('select'),areas=modal.querySelectorAll('textarea[name="callout"]'),buttons=[...modal.querySelectorAll('button')].filter(b=>b.textContent.trim()==='Save and close');
+  if(selects.length!==1||areas.length!==1||buttons.length!==1||selects[0].value!==tip.type||areas[0].value!==tip.markdown)throw Error('The opened callout does not match its captured type and text.');
+  const node=key==='type'?selects[0]:areas[0],proto=key==='type'?HTMLSelectElement.prototype:HTMLTextAreaElement.prototype;
+  checkDeadline();Object.getOwnPropertyDescriptor(proto,'value').set.call(node,after);node.dispatchEvent(new Event('input',{bubbles:true}));node.dispatchEvent(new Event('change',{bubbles:true}));await settle();
+  const immediate=read();if(stable(immediate.live)!==stable(current.live)||stable(immediate.saved)!==stable(current.saved))throw Error('Outside edits appeared while the callout dialog was open. No callout was saved.');
+  checkDeadline();buttons[0].click();await settle();return read();
+ }
  let node,value,sectionDuration=false;
  if(path.length===1&&path[0]==='title'){node=fieldNode('title');value=current.live.fields.title;}
  else if(path.length===2&&path[0]==='frontMatter'&&Object.keys(labels).includes(path[1])&&path[1]!=='title'){node=fieldNode(path[1]);value=current.live.fields[path[1]];}
@@ -326,6 +351,7 @@ export function unsupportedNativeActions(plan){
   if(p.length===1&&p[0]==='title')return false;
   if(p.length===2&&p[0]==='frontMatter'&&TEXT_FIELDS.includes(p[1]))return false;
   if(p[0]==='activities'&&Number.isInteger(p[1])&&p[1]>=0){
+   if(p.length===7&&p[2]==='sections'&&Number.isInteger(p[3])&&p[3]>=0&&p[4]==='callouts'&&Number.isInteger(p[5])&&p[5]>=0)return p[6]==='body'?typeof op.after!=='string'||op.after.length>100000:p[6]!=='type'||!['Teaching Tip','Content Corner','Discussion Goal','Assessment Opportunity','Ethics Opportunity'].includes(op.after);
    if(p.length===3&&['title','duration'].includes(p[2]))return p[2]==='duration'&&op.after!==null&&!Number.isInteger(op.after);
    if(p.length===5&&p[2]==='sections'&&Number.isInteger(p[3])&&p[3]>=0&&['title','duration','body','remarks'].includes(p[4]))return p[4]==='duration'&&op.after!==null&&(!Number.isInteger(op.after)||op.after===0);
   }
@@ -337,7 +363,7 @@ export function makeNativeScalarDriver(initialSnapshot,bridge){
  return {mode:'native-unsaved-scalars',
   preflight:async plan=>{
    if(initialSnapshot.mode!=='native-read-only'||initialSnapshot.raw?.readerVersion!=='native-scalars-v1'||!initialSnapshot.nativeProtection)throw Error('Capture the current native editor with the scalar adapter first.');
-   const unsupported=unsupportedNativeActions(plan);if(unsupported.length)throw Error('Native staging does not yet support these locations: '+unsupported.map(op=>op.label).join('; ')+'. No native fields were filled.');
+   const unsupported=[...unsupportedNativeActions(plan),...plan.operations.filter(op=>op.path.length===7&&op.path[4]==='callouts')];if(unsupported.length)throw Error('Native staging does not yet support these locations: '+unsupported.map(op=>op.label).join('; ')+'. No native fields were filled.');
    if(canonical(plan.originalSnapshot)!==canonical(initialSnapshot))throw Error('The native adapter belongs to a different captured editor state.');
   },
   read:async()=>{

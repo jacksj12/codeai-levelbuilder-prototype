@@ -1,3 +1,4 @@
+import {reviewedLevelGroups} from './reviewed-structure.mjs';
 // Serialized into the assigned editor. GET only; never submit the level forms.
 export async function readAssignedLevelUsage(request={}){
  try{
@@ -22,9 +23,10 @@ export async function readAssignedLevelUsage(request={}){
 }
 
 export function findUnitLevelConflicts(review,usages){
+ if(!reviewedLevelGroups(review).flatMap(c=>c.addLevels).length)return {passed:true,unit:null,conflicts:[]};
  const match=review.baseline.lessonPath?.match(/^\/s\/([^/]+)\/lessons\/\d+$/);
  if(!match)throw Error('The destination unit identity could not be established.');
- const prefix='/s/'+match[1]+'/lessons/',wanted=review.changes.flatMap(c=>c.addLevels),conflicts=[];
+ const prefix='/s/'+match[1]+'/lessons/',wanted=reviewedLevelGroups(review).flatMap(c=>c.addLevels),conflicts=[];
  for(const level of wanted){
   const evidence=usages.filter(u=>u.kind==='native-level-usage'&&u.levelId===String(level.levelId)&&u.name===level.name&&Array.isArray(u.paths));
   if(evidence.length!==1)throw Error('Unique existing-unit usage evidence is required for '+level.name+'.');

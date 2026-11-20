@@ -1,3 +1,4 @@
+import {savedFieldPath,restoreFieldProtection} from './reviewed-fields.mjs';
 import {clone,canonical,digest,validatePlan,applyOperation} from './transfer-core.mjs';
 import {normalizeNativeCapture} from './transfer-native.mjs';
 import {unsupportedNativeActions} from './native-dom-adapter.mjs';
@@ -24,7 +25,7 @@ function snapshot(capture){
  return value;
 }
 function preserved(before,after,op){
- const protection=clone(after.nativeProtection),p=op.path;
+ const protection=clone(after.nativeProtection),p=op.path;restoreFieldProtection(protection,before.nativeProtection,savedFieldPath(op));
  if(op.kind==='append'){
   const activity=protection.unmanagedActivities[p[1]];
   if(p.length===3)activity.activitySections.pop();
