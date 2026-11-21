@@ -58,3 +58,30 @@ test('changed notes cannot silently reuse a renumbered PowerPoint slide identity
  const parts=xmlParts(),before=presentationParts(parts);parts.set('ppt/notesSlides/notesSlide2.xml',parts.get('ppt/notesSlides/notesSlide2.xml').replace('Notes 2','Different slide'));
  const after=presentationParts(parts);assert.notEqual(before.slides[0].id,after.slides[0].id);assert.equal(before.slides[1].id,after.slides[1].id);
 });
+
+test('Notion block imports preserve formatting inside complete nested columns',()=>{
+ const blocks=[{type:'column_list',has_children:true,children:[{type:'column',has_children:true,children:[{type:'heading_2',heading_2:{rich_text:[{plain_text:'Teacher overview'}]}},{type:'paragraph',paragraph:{rich_text:[{plain_text:'Important',annotations:{bold:true}},{plain_text:' guidance',annotations:{italic:true}}]}}]}]}];
+ const result=notionBlocks({results:blocks});assert.equal(result.fields.teacherOverview,'**Important*** guidance*');
+ blocks[0].children[0].children.push({type:'paragraph',paragraph:{rich_text:[{plain_text:'Unsafe',href:'javascript:alert(1)'}]}});assert.throws(()=>notionBlocks({results:blocks}),/HTTPS/);
+});
+test('Notion links retain literal brackets and URL parentheses without truncation',()=>{
+ const result=notionBlocks({results:[{type:'heading_2',heading_2:{rich_text:[{plain_text:'Resources'}]}},{type:'paragraph',paragraph:{rich_text:[{plain_text:'[EXEMPLAR] Guide',href:'https://example.com/guide(v2)'}]}}]});assert.equal(result.fields.resources[0].name,'[EXEMPLAR] Guide');assert.equal(result.fields.resources[0].url,'https://example.com/guide%28v2%29');assert.equal(result.fields.resources[0].audience,'Verified Teacher');
+});
+
+test('nested brief headings retain their teaching content while unrelated peers remain warnings',()=>{
+ const result=notionMarkdown('## Teacher overview\nOpening\n### Facilitation\nKeep this explanation\n#### Example\nKeep this example\n## Internal tracking\nNot teaching content\n## Preparation\nMaterials');
+ assert.equal(result.fields.teacherOverview,'Opening\n### Facilitation\nKeep this explanation\n#### Example\nKeep this example');assert.equal(result.fields.preparation,'Materials');assert.ok(result.warnings.some(w=>w.includes('Internal tracking')));assert.ok(!result.fields.teacherOverview.includes('Not teaching'));
+});
+
+test('Slides rejects missing or duplicate identities and malformed note text before merging',()=>{
+ const slide={objectId:'a',slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[{objectId:'n',shape:{text:{textElements:[{textRun:{content:'Teaching'}}]}}}]}}};
+ for(const slides of [[{...slide,objectId:''}],[slide,structuredClone(slide)]])assert.throws(()=>slidesJson({presentationId:'deck',slides}),/identities/);
+ const broken=structuredClone(slide);broken.slideProperties.notesPage.pageElements[0].shape.text.textElements[0].textRun.content={unreadable:true};assert.throws(()=>slidesJson({presentationId:'deck',slides:[broken]}),/invalid text/);
+ const ambiguous=structuredClone(slide);ambiguous.slideProperties.notesPage.pageElements.push(ambiguous.slideProperties.notesPage.pageElements[0]);assert.throws(()=>slidesJson({presentationId:'deck',slides:[ambiguous]}),/ambiguous/);
+});
+
+test('PowerPoint rejects conflicting entry headers and duplicate ignored media names',async()=>{
+ const archive=zip(new Map([['notes.xml','Text']]),{compressed:false});archive[30]='x'.charCodeAt(0);await assert.rejects(unzipOffice(archive),/headers disagree/);
+ const sizes=zip(new Map([['notes.xml','Text']]),{compressed:false});sizes.writeUInt32LE(99,22);await assert.rejects(unzipOffice(sizes),/sizes or checksums/);
+ const duplicate={size:2,*[Symbol.iterator](){yield ['image.png','A'];yield ['image.png','B'];}};await assert.rejects(unzipOffice(zip(duplicate)),/unsafe/);
+});

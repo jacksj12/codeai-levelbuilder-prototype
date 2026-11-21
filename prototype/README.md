@@ -1,3 +1,7 @@
+# Current validation — release 0.12.4
+
+The ten requested build/test passes are complete: **241 tests pass**. Read [TEN-PASS-VALIDATION.md](TEN-PASS-VALIDATION.md) for changes, real import checks and remaining scope. The installed 0.12.3 companion unchanged-save workflow previously passed with all four levels and existing content preserved. This release makes local import/revision changes only; no additional live save or cleanup was performed. Historical notes below describe earlier states.
+
 # Lesson Studio — setup and delivery guide
 
 The local workspace supports lesson preview, focused editing, described issue flags, one overall local approval, structured exports and full workspace backups. The native companion prepares a separate exact destination review before an explicitly approved save. The isolated demo exercises that transfer workflow using synthetic data.
@@ -13,7 +17,7 @@ npm start
 
 Open [Lesson workspace](http://127.0.0.1:4316) or [Transfer demo](http://127.0.0.1:4316/workflow.html). If occupied, set `$env:PORT='43834'` before `npm start` and use the printed address. Verify that startup serves this saved checkout's `prototype/dist`. The separate Documents/ChatGPT project folder is an older backup, not the build destination. Browser storage is separate for each hostname and port.
 
-From `prototype`, run `node --test --test-isolation=none`. The latest delivery check passes **227 tests**. Six controller checks exercise the real transfer-screen handlers with a minimal DOM: broader preparation/save/reload/recheck, storage failure, failed durable attempt storage, reload after storage fails following dispatch, confirmed read-only baseline export for a selected destination, and real serialized saved-reader errors before any capture. A package check resolves the local dependency graph from the extension/demo entry points and checks the manifest and unarmed default mode. They are controller simulations, not browser or live acceptance.
+From `prototype`, run `node --test --test-isolation=none`. The latest delivery check passes **241 tests**. Six controller checks exercise the real transfer-screen handlers with a minimal DOM: broader preparation/save/reload/recheck, storage failure, failed durable attempt storage, reload after storage fails following dispatch, confirmed read-only baseline export for a selected destination, and real serialized saved-reader errors before any capture. A package check resolves the local dependency graph from the extension/demo entry points and checks the manifest and unarmed default mode. They are controller simulations, not browser or live acceptance.
 
 ## First use: review and export
 
@@ -61,13 +65,13 @@ Destination title, unlisted content, settings and existing record identities are
 
 If preparation stops, download the report before changing the editor. Baseline errors identify differing normalized field paths or capture blockers. Outside edits block restoration. If evidence cannot be stored, the screen pauses write controls and keeps a downloadable in-memory report; retain it and restore storage access before reloading the same run. Do not clear browser data or launch another save to recover.
 
-## Acceptance and remaining limits
+## Historical acceptance notes (superseded by current validation)
 
 The latest accepted live result is the user's approved **native UI save** on November 20, 2026. An independent fresh editor load verified all activity/section text, timing, remarks, both overviews and six callouts with zero mismatches: three activities, ten sections, six callouts, four original levels and three assessments. Original activity/section identities and all unreviewed saved fields were preserved. Earlier, a restricted companion four-link API save was also independently verified.
 
 The reusable companion's **automatic complete preparation/save path remains unverified end to end on the live site**. Its expanded teaching/structural path has regression, simulation and native-shaped fixture evidence; the native UI save is separate acceptance. **Live receipt-owned cleanup remains unaccepted.** Preserve the accepted lesson; no new live save or cleanup is authorized for delivery testing.
 
-Direct authenticated source import, complete destination-aware three-way revisions, general publishing, AI interpretation, shared collections/assets and cross-curriculum validation remain unfinished. Tests are engineering checks, not independent curriculum signoff. Downloaded reports contain private source/destination content and restore evidence; keep them outside Git.
+Current source import and destination-aware revision support is described below and in TEN-PASS-VALIDATION.md. Standalone Notion OAuth, general publishing, AI interpretation, shared collections/assets and cross-curriculum validation remain unfinished. Tests are engineering checks, not independent curriculum signoff. Downloaded reports contain private source/destination content and restore evidence; keep them outside Git.
 
 See the newest entry in [NEXT-SESSION-HANDOFF.md](../NEXT-SESSION-HANDOFF.md) for current state. Dated [activity](ACTIVITY-TRANSFER-ACCEPTANCE.md), [broader transfer](BROADER-TRANSFER-ACCEPTANCE.md), [teaching](TEACHING-TRANSFER-ACCEPTANCE.md), [native](NATIVE-SCALAR-ACCEPTANCE.md) and other acceptance notes retain historical evidence; their earlier pending-status statements are superseded by that handoff.
 

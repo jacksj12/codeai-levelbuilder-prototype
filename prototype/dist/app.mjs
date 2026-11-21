@@ -1,3 +1,4 @@
+import {prepareWorkspaceImport} from './workspace-import.mjs';
 import {connectDestinationBaseline,mergeDestinationReport} from './destination-revisions.mjs';
 import {importSourceFile,combineSourceImports} from './source-imports.mjs';
 import {saveWorkspace} from './workspace-storage.mjs';
@@ -154,11 +155,12 @@ $('#workspace-restore').onchange=async e=>{try{const file=e.target.files[0];if(!
 const pendingSourceId=new URL(location.href).searchParams.get('sourceImport');
 if(pendingSourceId){try{const item=JSON.parse(localStorage.getItem('lesson-studio-pending-source-'+pendingSourceId));if(!item)throw Error('The imported deck is no longer available. Import it again from its Slides tab.');const result=combineSourceImports(state.source,[item]);$('#source-input').value=JSON.stringify(result.source,null,2);$('#import-error').textContent=`Imported ${result.source.slides.length} slides. ${result.warnings.join(' ')} The current brief remains in the package; review it or choose a Notion brief before generating.`;$('#import-dialog').showModal();}catch(error){notice(error.message);}}
 
+let importingDestination=false;
 document.addEventListener('change',async event=>{
  const input=event.target;if(!['destination-baseline-file','destination-revision-file'].includes(input.id))return;
- const file=input.files[0];if(!file)return;input.disabled=true;
- try{if(file.size>32_000_000)throw Error('Choose a report smaller than 32 MB.');const report=JSON.parse(await file.text());
- if(input.id==='destination-baseline-file'){state=await connectDestinationBaseline(state,report);persist();render();notice('Saved destination baseline linked. No local or remote content changed.');}
- else{const result=await mergeDestinationReport(state,report);state=result.state;persist();render();notice(`${result.updates} saved-lesson updates applied locally; ${result.conflicts} conflicts require decisions. Level Builder is unchanged. ${result.notices.join(' ')}`);}
- }catch(error){notice(error.message);}finally{input.disabled=false;input.value='';}
+ const file=input.files[0];if(!file)return;if(importingDestination){notice('Wait for the current saved report to finish loading.');input.value='';return;}importingDestination=true;input.disabled=true;
+ try{
+ if(input.id==='destination-baseline-file'){state=await prepareWorkspaceImport(()=>state,file,connectDestinationBaseline);persist();render();notice('Saved destination baseline linked. No local or remote content changed.');}
+ else{const result=await prepareWorkspaceImport(()=>state,file,mergeDestinationReport);state=result.state;persist();render();notice(`${result.updates} saved-lesson updates applied locally; ${result.conflicts} conflicts require decisions. Level Builder is unchanged. ${result.notices.join(' ')}`);}
+ }catch(error){notice(error.message);}finally{importingDestination=false;input.disabled=false;input.value='';}
 });

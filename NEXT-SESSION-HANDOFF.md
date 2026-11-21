@@ -1,3 +1,7 @@
+# Ten requested build/test passes completed — release 0.12.4
+
+See prototype/TEN-PASS-VALIDATION.md for all ten passes, 241 passing tests, real import checks and exact acceptance boundaries. Source imports and destination revisions are hardened; no new live saves or cleanup. The live lesson and four original levels were untouched. The retained successful receipt passed offline revalidation; browser imported the actual deck and brief in a separate local workspace. Local changes are ready; installed companion remains the previously accepted 0.12.3 until a later necessary reload. No user click was needed for these ten passes.
+
 # LIVE companion preservation dispatch accepted — November 20, 2026
 
 Latest report: Downloads/reviewed-transfer-98fc070f-3ce9-47c4-9d5f-b3e948ad5a0d.json, 21:15 local, companionVersion 0.12.3, destination 8898984. User explicitly approved and ran the fresh unchanged companion test after the prior pre-dispatch evidence-storage failure. Status saved-and-verified; dispatch native-editor-acknowledged; nativeAcknowledgementConfirmed true; verification passed with zero mismatches; baselineUnchanged true; automaticRecheck true; saveRetried false; no preparation error or recovery needed.

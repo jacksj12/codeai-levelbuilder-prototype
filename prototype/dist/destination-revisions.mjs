@@ -11,6 +11,21 @@ export async function savedReport(report){
   const check=await verifySavedReadback(report.receipt.review,report.receipt.readback);if(!check.passed)throw Error('The saved report failed independent verification.');saved=report.receipt.readback;
  }else if(report.checkpoint?.status==='baseline-read'&&!report.preparationError)saved=report.checkpoint.freshSaved;
  if(!saved||saved.id!==report.destination.id)throw Error('The report has no complete saved lesson for this destination.');
+ // A partial report must never masquerade as an intentional deletion.
+ const identity=value=>(typeof value==='number'||typeof value==='string'&&/^[1-9]\d*$/.test(value))&&Number.isSafeInteger(Number(value))&&Number(value)>0;
+ const text=value=>typeof value==='string'||value===null;
+ if(!identity(saved.id)||typeof saved.name!=='string'||
+ ['overview','studentOverview','purpose','preparation','assessmentOpportunities'].some(k=>!Object.hasOwn(saved,k)||!text(saved[k]))||
+ ['activities','objectives','resources','vocabularies'].some(k=>!Array.isArray(saved[k])))throw Error('The saved report is incomplete. Export a fresh complete baseline.');
+ if(saved.objectives.some(o=>!o||typeof o.description!=='string')||saved.vocabularies.some(v=>!v||typeof v.word!=='string'||typeof v.definition!=='string')||saved.resources.some(r=>!r||['key','name','type','audience','url'].some(k=>typeof r[k]!=='string')))throw Error('The saved report contains incomplete collection records.');
+ for(const a of saved.activities){
+  if(!a||!identity(a.id)||!Object.hasOwn(a,'duration')||typeof a.name!=='string'||!Array.isArray(a.activitySections))throw Error('The saved report contains an incomplete activity.');
+  for(const section of a.activitySections){
+   if(!section||!identity(section.id)||!Object.hasOwn(section,'duration')||!Object.hasOwn(section,'remarks')||!(section.remarks===null||typeof section.remarks==='boolean')||!Object.hasOwn(section,'name')||!text(section.name)||!Object.hasOwn(section,'description')||!text(section.description)||!Array.isArray(section.scriptLevels)||!(section.tips===null||Array.isArray(section.tips)))throw Error('The saved report contains an incomplete section.');
+   if((section.tips||[]).some(tip=>!tip||typeof tip.type!=='string'||!Object.hasOwn(tip,'markdown')||!text(tip.markdown)))throw Error('The saved report contains an incomplete callout.');
+   if(section.scriptLevels.some(link=>!link||typeof link.assessment!=='boolean'||!identity(link.id)||!Array.isArray(link.levels)||link.levels.some(level=>!identity(level.id)||typeof level.name!=='string')))throw Error('The saved report contains an incomplete level association.');
+  }
+ }
  const fields={title:saved.name,teacherOverview:saved.overview??'',studentOverview:saved.studentOverview??'',purpose:saved.purpose??'',preparation:saved.preparation??'',assessmentOpportunities:saved.assessmentOpportunities??''};
  const snapshot=normalizeNativeCapture({kind:'native-dom-capture',destination:report.destination,saved,blockers:[],live:{fields,activities:saved.activities,objectives:saved.objectives,resources:saved.resources,vocabularies:saved.vocabularies}});
  if(snapshot.blockers.length)throw Error(snapshot.blockers.join(' '));
@@ -33,15 +48,27 @@ export async function connectDestinationBaseline(state,report){
 function project(incoming,base){
  const original=normalizedDraft(base.lesson);
  const retain=(before,after,raw)=>canonical(before)===canonical(after)?clone(raw):clone(after);
- const draft=clone(base.lesson);draft.frontMatter=clone(incoming.lesson.frontMatter);draft.resources=incoming.lesson.resources.map(({key,name,type,audience,url})=>({key,name,type,audience,url}));for(const key of Object.keys(draft.frontMatter))draft.frontMatter[key]=retain(original.frontMatter[key],draft.frontMatter[key],base.lesson.frontMatter[key]);draft.activities=[];draft.sections=[];
+ const draft=clone(base.lesson);draft.frontMatter=clone(incoming.lesson.frontMatter);draft.resources=incoming.lesson.resources.map(({key,name,type,audience,url})=>({key,name,type,audience,url}));draft.resources=retain(original.resources,draft.resources,base.lesson.resources);for(const key of Object.keys(draft.frontMatter))draft.frontMatter[key]=retain(original.frontMatter[key],draft.frontMatter[key],base.lesson.frontMatter[key]);draft.activities=[];draft.sections=[];
  incoming.saved.activities.forEach((a,ai)=>{
   const id=base.activities[a.id]||'destination-'+incoming.destination.id+'-activity-'+a.id,old=base.lesson.activities.find(a=>a.id===id),normalized=incoming.lesson.activities[ai];
   draft.activities.push({...clone(old||{}),id,title:normalized.title,duration:normalized.duration,origin:old?.origin||'destination'});
   a.activitySections.forEach((s,si)=>{
    const sectionId=base.sections[s.id]||'destination-'+incoming.destination.id+'-section-'+s.id,previous=base.lesson.sections.find(s=>s.id===sectionId),content=normalized.sections[si];
-   const oldIndex=base.lesson.activities.findIndex(a=>a.id===id),oldSectionIndex=base.lesson.sections.filter(s=>s.activityId===id).findIndex(s=>s.id===sectionId);
+   const oldIndex=base.lesson.activities.findIndex(a=>a.id===previous?.activityId),oldSectionIndex=base.lesson.sections.filter(s=>s.activityId===previous?.activityId).findIndex(s=>s.id===sectionId);
    const prior=original.activities[oldIndex]?.sections[oldSectionIndex];
-   if(prior)for(const key of Object.keys(content))content[key]=retain(prior[key],content[key],previous[key]);
+   let changedLevelIdentity=false;
+   if(content.progression&&previous?.progression){
+    const savedBefore=base.saved.activities.flatMap(a=>a.activitySections).find(section=>section.id===s.id);
+    const active=link=>link?.levels?.find(level=>String(level.id)===String(link.activeId))||link?.levels?.[0];
+    content.progression.levels=content.progression.levels.map((level,index)=>{
+     const currentNative=active(s.scriptLevels[index]);
+     const matched=(savedBefore?.scriptLevels||[]).some(link=>String(active(link)?.id)===String(currentNative?.id)&&active(link)?.name===level.key);
+     if(!matched)changedLevelIdentity=true;
+     const oldLevel=previous.progression.levels.find(item=>item.key===level.key);
+     return matched&&oldLevel?{...clone(oldLevel),...level}:level;
+    });
+   }
+   if(prior)for(const key of Object.keys(content))if(key!=='progression'||!changedLevelIdentity)content[key]=retain(prior[key],content[key],previous[key]);
    draft.sections.push({...clone(previous||{slide:null,sourceNotes:'Imported from saved destination section '+s.id,changes:[],origin:'destination'}),...clone(content),id:sectionId,activityId:id});
   });
  });

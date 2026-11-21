@@ -8,15 +8,19 @@ export async function unzipOffice(input){
  if(end<0||end+22+v.getUint16(end+20,true)!==bytes.length)throw Error('Choose a complete PowerPoint presentation.');
  const count=v.getUint16(end+10,true),size=v.getUint32(end+12,true),offset=v.getUint32(end+16,true);
  if(v.getUint16(end+4,true)||v.getUint16(end+6,true)||count!==v.getUint16(end+8,true)||count>4000||offset+size!==end)throw Error('Unsupported presentation archive.');
- const parts=new Map();let p=offset,total=0;
+ const parts=new Map(),names=new Set();let p=offset,total=0;
  for(let i=0;i<count;i++){
   if(p+46>end||v.getUint32(p,true)!==0x02014b50)throw Error('Invalid presentation directory.');
   const flags=v.getUint16(p+8,true),method=v.getUint16(p+10,true),crc=v.getUint32(p+16,true),compressed=v.getUint32(p+20,true),length=v.getUint32(p+24,true),n=v.getUint16(p+28,true),extra=v.getUint16(p+30,true),comment=v.getUint16(p+32,true),at=v.getUint32(p+42,true);
   const name=decode.decode(bytes.subarray(p+46,p+46+n));p+=46+n+extra+comment;
-  if(p>end||flags&1||![0,8].includes(method)||parts.has(name)||name.startsWith('/')||name.split('/').includes('..')||name.includes('\\'))throw Error('Unsupported or unsafe presentation entry.');
+  if(p>end||flags&1||![0,8].includes(method)||names.has(name)||!name||name.includes('\0')||name.startsWith('/')||name.split('/').includes('..')||name.includes('\\'))throw Error('Unsupported or unsafe presentation entry.');
   if(at+30>offset||v.getUint32(at,true)!==0x04034b50)throw Error('Invalid presentation entry.');
   const from=at+30+v.getUint16(at+26,true)+v.getUint16(at+28,true);
   if(from+compressed>offset)throw Error('Truncated presentation entry.');
+  const localName=decode.decode(bytes.subarray(at+30,at+30+v.getUint16(at+26,true)));
+  if(localName!==name||v.getUint16(at+6,true)!==flags||v.getUint16(at+8,true)!==method)throw Error('Presentation entry headers disagree.');
+  if(!(flags&8)&&(v.getUint32(at+14,true)!==crc||v.getUint32(at+18,true)!==compressed||v.getUint32(at+22,true)!==length))throw Error('Presentation entry sizes or checksums disagree.');
+  names.add(name);
   // Ignore images and other binary media; only parse the bounded XML relationships and notes.
   if(!/\.(xml|rels)$/.test(name))continue;
   total+=length;if(length>4_000_000||total>MAX)throw Error('Presentation text exceeds the import limit.');
@@ -57,7 +61,16 @@ export function presentationParts(parts,name='Presentation'){
  return {kind:'slides',title:name.replace(/\.pptx$/i,''),slides,warnings:slides.filter(s=>!s.notes).map(s=>'Slide '+s.number+' has no speaker notes.')};
 }
 export function slidesJson(data){
- if(!data.presentationId||!Array.isArray(data.slides))throw Error('Choose a Google Slides presentation response.');
+ if(typeof data.presentationId!=='string'||!/^[-\w]+$/.test(data.presentationId)||!Array.isArray(data.slides)||!data.slides.length||data.slides.length>2000)throw Error('Choose a Google Slides presentation response.');
+ if(data.slides.some(s=>!s||typeof s.objectId!=='string'||!s.objectId.trim())||new Set(data.slides.map(s=>s.objectId)).size!==data.slides.length)throw Error('The Slides response has missing or duplicate slide identities.');
+ for(const slide of data.slides){
+  const page=slide.slideProperties?.notesPage;if(!page)continue;
+  const elements=page.pageElements||[];if(!Array.isArray(elements))throw Error('The Slides notes are incomplete.');
+  const matches=elements.filter(e=>e.objectId===page.notesProperties?.speakerNotesObjectId);
+  if(matches.length>1)throw Error('The Slides response has ambiguous speaker notes.');
+  const runs=matches[0]?.shape?.text?.textElements||[];
+  if(!Array.isArray(runs)||runs.some(run=>!run||(run.textRun&&typeof run.textRun.content!=='string')))throw Error('The Slides notes contain invalid text.');
+ }
  const slides=data.slides.map((s,i)=>{const page=s.slideProperties?.notesPage,id=page?.notesProperties?.speakerNotesObjectId,shape=page?.pageElements?.find(e=>e.objectId===id)?.shape;
   return {id:s.objectId,number:i+1,notes:(shape?.text?.textElements||[]).map(e=>e.textRun?.content||'').join('').trim()};});
  if(!slides.some(s=>s.notes))throw Error('The Slides response does not include speaker notes.');
@@ -66,7 +79,7 @@ export function slidesJson(data){
 const fields={'overview (teacher)':'teacherOverview','overview (student)':'studentOverview','links':'resources','vocab':'vocabulary','teacher overview':'teacherOverview','overview':'teacherOverview','student overview':'studentOverview','objectives':'objectives','learning objectives':'objectives','preparation':'preparation','purpose':'purpose','vocabulary':'vocabulary','assessment opportunities':'assessmentOpportunities','resources':'resources','resource links':'resources','course':'course'};
 export function notionMarkdown(markdown){
  if(markdown.length>2_000_000)throw Error('Brief must be smaller than 2 MB.');
- const result={kind:'brief',fields:{},warnings:[]};let key=null,lines=[];
+ const result={kind:'brief',fields:{},warnings:[]};let key=null,keyDepth=0,lines=[];
  markdown=markdown.replace(/<\/?(?:column|columns|callout|p)\b[^>]*>/gi,'').replace(/<\/?b>/gi,'**').replace(/<\/?i>/gi,'*');
 
  function flush(){if(!key)return;const text=lines.join('\n').trim();if(['objectives','vocabulary'].includes(key))result.fields[key]=/^(n\/?a|none|not applicable)[.!]?$/i.test(text.replace(/^[-*+]\s+/,''))?[]:text.split('\n').map(s=>s.replace(/^\s*(?:[-*+] |\d+[.)] )/,'').trim()).filter(s=>s&&!/^Students will be able to:?$/i.test(s));
@@ -75,16 +88,38 @@ export function notionMarkdown(markdown){
    result.fields.resources=resources;if(text&&!resources.length)throw Error('Resources need Markdown links with HTTPS destinations.');
   }else result.fields[key]=text;lines=[];
  }
- for(const line of markdown.replace(/\r\n/g,'\n').split('\n')){const heading=line.match(/^(#{1,6})\s+(.+?)\s*#*$/);if(heading){const label=heading[2].replace(/\*\*/g,'').replace(/:$/,'').trim(),mapped=fields[label.toLowerCase()];if(mapped){flush();if(Object.hasOwn(result.fields,mapped))throw Error('Duplicate brief section: '+label);key=mapped;lines=[];continue;}if(heading[1]==='#'&&!result.title){flush();key=null;result.title=label;continue;}if(key==='resources'&&/^(teacher resources|student resources)$/i.test(label)){lines.push(label);continue;}if(heading){flush();key=null;lines=[];result.warnings.push('Unmapped brief heading: '+label);continue;}}if(key)lines.push(line);}flush();
+ for(const line of markdown.replace(/\r\n/g,'\n').split('\n')){const heading=line.match(/^(#{1,6})\s+(.+?)\s*#*$/);if(heading){const label=heading[2].replace(/\*\*/g,'').replace(/:$/,'').trim(),mapped=fields[label.toLowerCase()];if(mapped){flush();if(Object.hasOwn(result.fields,mapped))throw Error('Duplicate brief section: '+label);key=mapped;keyDepth=heading[1].length;lines=[];continue;}if(heading[1]==='#'&&!result.title){flush();key=null;result.title=label;continue;}if(key==='resources'&&/^(teacher resources|student resources)$/i.test(label)){lines.push(label);continue;}if(key&&heading[1].length>keyDepth){lines.push(line);continue;}if(heading){flush();key=null;lines=[];result.warnings.push('Unmapped brief heading: '+label);continue;}}if(key)lines.push(line);}flush();
  if(!Object.keys(result.fields).length)throw Error('No brief sections recognized. Use headings such as Teacher overview, Objectives, Preparation and Resources.');return result;
 }
 export function notionBlocks(data){
  if(data.has_more||data.next_cursor)throw Error('Notion export is incomplete. Include all pages of blocks.');
  const blocks=data.results||data.blocks;if(!Array.isArray(blocks))throw Error('Choose a Notion blocks export.');
- const lines=[];function walk(items){for(const b of items){const value=b[b.type]||{},text=(value.rich_text||[]).map(t=>{const content=t.plain_text??t.text?.content??'',url=t.href??t.text?.link?.url;return url?'['+content+']('+url+')':content;}).join('');
-  if(/^heading_[123]$/.test(b.type))lines.push('#'.repeat(Number(b.type.slice(-1)))+' '+text);else if(['paragraph','bulleted_list_item','numbered_list_item','quote','callout','toggle'].includes(b.type))lines.push((b.type.endsWith('list_item')?'- ':'')+text);else if(!['divider'].includes(b.type))throw Error('Unsupported Notion block '+b.type+'. Export the brief as Markdown to preserve it.');
-  const children=b.children||value.children;if(b.has_children&&!Array.isArray(children))throw Error('Notion export is missing child blocks.');if(children)walk(children);
- }}walk(blocks);return notionMarkdown(lines.join('\n\n'));
+ const lines=[];let count=0;
+ function walk(items,depth=0){
+  if(depth>32||!Array.isArray(items))throw Error('Notion block nesting is unsupported. Export the brief as Markdown.');
+  for(const b of items){
+   if(++count>10000||!b||typeof b.type!=='string')throw Error('Notion export has too many or invalid blocks.');
+   const value=b[b.type]||{},heading=/^heading_[123]$/.test(b.type);
+   const text=(value.rich_text||[]).map(t=>{
+    let content=t.plain_text??t.text?.content??'';const url=t.href??t.text?.link?.url,a=t.annotations||{};
+    if(!heading){
+     if(a.code)content='`'+content.replace(/`/g,'\\`')+'`';
+     else{if(a.bold)content='**'+content+'**';if(a.italic)content='*'+content+'*';if(a.strikethrough)content='~~'+content+'~~';}
+    }
+    if(url){let parsed;try{parsed=new URL(url);}catch{throw Error('Notion link has an invalid destination.');}
+     if(parsed.protocol!=='https:')throw Error('Notion links need HTTPS destinations.');
+     content='['+content.replace(/([\[\]])/g,'\\$1')+']('+parsed.href.replace(/\(/g,'%28').replace(/\)/g,'%29')+')';
+    }return content;
+   }).join('');
+   if(heading)lines.push('#'.repeat(Number(b.type.slice(-1)))+' '+text);
+   else if(['paragraph','bulleted_list_item','numbered_list_item','quote','callout','toggle'].includes(b.type))lines.push((b.type.endsWith('list_item')?'- ':'')+text);
+   else if(!['divider','column_list','column'].includes(b.type))throw Error('Unsupported Notion block '+b.type+'. Export the brief as Markdown to preserve it.');
+   const children=b.children||value.children;
+   if(b.has_children&&!Array.isArray(children))throw Error('Notion export is missing child blocks.');
+   if(children)walk(children,depth+1);
+  }
+ }
+ walk(blocks);return notionMarkdown(lines.join('\n\n'));
 }
 export async function importSourceFile(file){
  if(file.size>MAX)throw Error('Source file must be smaller than 32 MB.');
