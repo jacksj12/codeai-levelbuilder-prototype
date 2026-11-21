@@ -94,3 +94,13 @@ In Teaching Guide, use **Add activity**, **Add section**, and **Move up / Move d
 Revised sources merge separate fields independently. Conflicting edits and blank text deletions appear in Revision review. Removing a source activity asks for one explicit decision covering its child sections, including local guidance. Keeping the group preserves it on later unchanged imports. Invalid orphan records block approval and backup import.
 
 If two tabs edit the same local workspace, the later stale tab saves into a separate recovery workspace and updates its URL. Both drafts remain available. Export backups to preserve them outside browser storage.
+
+## Import lesson sources (0.12.0)
+
+Choose **Import sources**, then select one Slides PowerPoint export (.pptx) and one Notion Markdown (.md) export together. Google Slides presentation JSON and complete Notion blocks JSON are also accepted. The source summary shows slide/note counts and any unmapped headings or level mappings. Expand **Review or edit combined source details** when needed, then choose **Generate / compare changes**. Imports do not save to Level Builder.
+
+Presentation files replace only slides; brief files update their recognized fields. Existing fields absent from a partial brief remain in the combined package. A complete normalized JSON source must be selected separately. Malformed or incomplete imports leave the existing package and draft intact. Unknown headings and identity changes remain visible warnings; source deletions require explicit revision decisions. PowerPoint exports do not reliably retain Google's original object IDs, so mappings are never guessed. Changed PowerPoint notes receive a new fallback identity; review the old/new sections explicitly.
+
+In the updated companion popup, **Import this Google Slides deck** reads an already-open, signed-in Slides tab with the existing active-tab permission, then opens the workspace's source review. It changes no source content. If Google disallows the export, use File → Download → Microsoft PowerPoint in Slides and import that file. Notion uses Markdown or complete blocks exports; this release does not include standalone Notion OAuth sign-in. Connected Notion tooling was used to verify the actual source format, not embedded as an application backend.
+
+Validation: 212 local tests passed; the actual source deck (15 slides / 14 notes) and connected Notion brief were imported together in the browser. Installed-extension execution remains unverified because the browser policy blocks extension pages. No new native save or cleanup was performed in this release.

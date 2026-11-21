@@ -6,18 +6,18 @@ import {digest} from '../dist/transfer-core.mjs';
 
 // Run the actual serialized extension function with a minimal editor DOM and
 // fake HTTP responses. No browser, live request, or test-only production branch.
-async function dispatch(response,{native=false,ambiguous=false,disabled=false,acknowledge=true,tamperTransport=false}={}){
+async function dispatch(response,{native=false,ambiguous=false,disabled=false,acknowledge=true,tamperTransport=false,delayed=false}={}){
  const destination={id:123,url:'https://levelbuilder-studio.code.org/lessons/123/edit'},saved={id:123,activities:[]},raw=JSON.stringify(saved);
  const names=['Title','Overview','Student Overview','Purpose','Preparation','Assessment Opportunities'];
  const labels=names.map(name=>({childNodes:[{nodeType:3,textContent:name}],querySelectorAll:()=>[{value:''}]}));
  const tables=[['Key','Name','Type','Audience','URL','Actions'],['Word','Definition','Actions']].map(headers=>({querySelector:s=>s==='thead'?{textContent:headers.join(' ')}:null,querySelectorAll:s=>s==='thead th'?headers.map(textContent=>({textContent})):[]}));
  const bootstrap={getAttribute:()=>raw};
- let clicks=0;
- const button={textContent:'Save and Keep Editing',disabled,getClientRects:()=>[{}],click:()=>{clicks++;if(acknowledge)document.body.textContent='Last saved at: synthetic saved time';}};
+ let clicks=0,notifyMutation=()=>{};
+ const button={textContent:'Save and Keep Editing',disabled,getClientRects:()=>[{}],click:()=>{clicks++;if(acknowledge){const finish=()=>{document.body.textContent='Last saved at: synthetic saved time';button.disabled=false;notifyMutation();};if(delayed){button.disabled=true;setTimeout(finish,5);}else finish();}}};
  const document={body:{textContent:''},querySelector:s=>s==='script[data-lesson]'?bootstrap:s==='meta[name="csrf-token"]'?{content:'SYNTHETIC-SECRET'}:null,
   querySelectorAll:s=>s==='#edit-container button'?(ambiguous?[button,button]:[button]):s==='#edit-container label'?labels:s==='#edit-container table'?tables:s.includes('input[type="hidden"]')?[{value:'[]'}]:[]};
  let puts=0;
- const context=vm.createContext({document,location:new URL(destination.url),structuredClone,crypto,TextEncoder,MessageChannel,setTimeout,clearTimeout,MutationObserver:class{observe(){}disconnect(){}},DOMParser:class{parseFromString(){return {querySelector:()=>bootstrap};}},
+ const context=vm.createContext({document,location:new URL(destination.url),structuredClone,crypto,TextEncoder,MessageChannel,setTimeout,clearTimeout,MutationObserver:class{constructor(callback){notifyMutation=callback;}observe(){}disconnect(){notifyMutation=()=>{};}},DOMParser:class{parseFromString(){return {querySelector:()=>bootstrap};}},
   fetch:async(url,options)=>{if(options.method==='PUT'){puts++;return response;}return {ok:true,text:async()=>'<synthetic baseline>'};}});
  const bridge=vm.runInContext('('+nativeEditorBridge.toString()+')',context),base={destination,practiceConfirmed:true};
  const capture=await bridge({...base,action:'read'});assert.deepEqual(Array.from(capture.blockers),[]);
@@ -59,4 +59,8 @@ test('native save timeout retains an unknown attempt and never falls back to dir
 });
 test('ambiguous, disabled and changed-transport native approvals block before any save click',async()=>{
  for(const options of [{ambiguous:true},{disabled:true},{tamperTransport:true}])await assert.rejects(dispatch(null,{native:true,...options}),/unavailable|ambiguous|approved/);
+});
+
+test('native save observes asynchronous editor acknowledgement without sending an API fallback',async()=>{
+ const result=await dispatch(null,{native:true,delayed:true});assert.equal(result.outcome,'native-editor-acknowledged');assert.equal(result.saveRetried,false);
 });

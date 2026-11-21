@@ -1,3 +1,5 @@
+import {sourcePageExport} from './source-page-export.mjs';
+import {unzipOffice,presentationParts} from '../dist/source-imports.mjs';
 import {createNativeTransport} from './native-transport.mjs';
 import {stageNativeTransferPlan,unsupportedNativeTransferActions} from '../dist/native-transfer-runner.mjs';
 import {nativeEditorBridge} from '../dist/native-dom-adapter.mjs';
@@ -122,4 +124,16 @@ $('resolve-levels').onclick=async()=>{
   for(const mapping of mappings)if(!state.snapshot.catalog.levels.some(level=>level.key===mapping.key))state.snapshot.catalog.levels.push(mapping);
   delete state.journal;persist();notice('Existing level mappings verified. Review all proposed changes before staging.');
  }catch(error){notice(error.message);}finally{running=false;await refresh();}
+};
+
+$('open-workspace').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL('dist/index.html')});
+$('import-deck').onclick=async()=>{
+ if(running)return;running=true;$('import-deck').disabled=true;notice('Exporting the selected Google Slides deck and speaker notes…');
+ try{const [tab]=await chrome.tabs.query({active:true,currentWindow:true});if(!tab?.id)throw Error('Open the Google Slides deck first.');
+ const [response]=await chrome.scripting.executeScript({target:{tabId:tab.id},func:sourcePageExport,args:[tab.url]});const result=response?.result;
+ if(result?.kind!=='google-slides-export')throw Error('No presentation export was returned.');
+ const bytes=Uint8Array.from(atob(result.base64),c=>c.charCodeAt(0)),parsed=presentationParts(await unzipOffice(bytes),result.name);parsed.deckUrl=result.deckUrl;
+ const id=crypto.randomUUID();localStorage.setItem('lesson-studio-pending-source-'+id,JSON.stringify(parsed));
+ await chrome.tabs.create({url:chrome.runtime.getURL('dist/index.html')+'?sourceImport='+id});notice('Speaker notes imported. Review them in the lesson workspace. No source content was changed.');
+ }catch(error){notice(error.message);}finally{running=false;$('import-deck').disabled=false;}
 };

@@ -1,3 +1,20 @@
+# Source imports and connected-browser boundary — November 20, 2026
+
+Release 0.12.0 implements source imports beyond normalized JSON:
+
+- Google Slides PowerPoint exports, preserving presentation order and speaker notes, excluding slide-number placeholders. ZIP parsing validates integrity, bounds decompression, rejects unsafe entries and external XML entities, and ignores binary media. PowerPoint fallback identities bind both exported ID and notes, preventing renamed/renumbered slides from silently inheriting unrelated mappings. Edited notes may therefore require explicit deletion/addition decisions. Slides API JSON retains original object IDs.
+- Notion Markdown and complete nested blocks JSON, including the real brief's Overview (Teacher), Overview (Student), Links and Vocab aliases, column wrappers, escaped exemplar titles and objective preamble. Pagination, missing children and unsupported blocks fail explicitly. Teacher/student resource audiences and answer-key restrictions are preserved. Unknown headings remain warnings through generation and reload.
+- Multi-file import combines one presentation and one brief before the user chooses Generate / compare changes. Drafts remain untouched during parsing or failed imports. Presentation import preserves current brief fields; a partial brief updates only recognized fields. Complete JSON packages are imported separately.
+- The companion has a read-only signed-in Slides import button using existing activeTab/scripting permissions. It exports only the selected deck, rejects navigation changes and sign-in HTML, validates the file, and opens a source review in the extension workspace. No credentials, new permissions, API keys or dependencies. This new installed-extension path is locally tested, not live accepted.
+
+Actual source checks: exported the original Google deck read-only through the available browser; it currently has 15 slides, 14 with notes. Fetched the original Notion page through its connected tool and parsed both overviews, exactly three objectives, preparation, three resources with correct audiences, and empty vocabulary. Private source export/brief files remain outside Git. In a separate local browser workspace, selecting both real files produced the source summary, and comparison produced 16 updates and four explicit revision conflicts without touching the saved lesson. Screenshot retained in the chat visualization folder. The original four saved levels remain unchanged.
+
+Native save validation was broadened with an asynchronous deployed-editor acknowledgement regression. Existing tests verify one click, zero companion PUTs, no timeout fallback, durable attempt storage, independent readback and no resend across reload. Full suite: **212 passed, zero failed**.
+
+The user explicitly requested extension reload and native workflow validation, then enabled Edge/Chrome and computer control. Edge and Chrome became discoverable. However, claiming edge://extensions was refused, and claiming the known chrome-extension:// companion page was explicitly blocked by browser security policy (only HTTP/HTTPS allowed, no alternate-surface workaround). A subsequent inventory still returned no native apps. We did not bypass this policy, reload the installed extension, or claim installed-extension live acceptance. No additional save or cleanup occurred. The current source code is ready for reload when a permitted extension-control surface is available. This is an access blocker, not missing user permission; do not ask the user to reauthorize the same requested work.
+
+Direct in-app Notion sign-in is not implemented: Notion imports use exported Markdown/complete blocks JSON, with the original brief additionally validated through the connected Notion tool in this session. General publishing/shared collection mutations remain outside the supported transfer surface. Do not call the entire historical roadmap complete.
+
 # Native save recovery and completed local authoring — November 20, 2026
 
 Companion 0.11.0. This entry supersedes the unresolved live-state claim below; historical failed receipts remain unchanged.

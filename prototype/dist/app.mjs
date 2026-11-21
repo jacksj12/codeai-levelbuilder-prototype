@@ -1,3 +1,4 @@
+import {importSourceFile,combineSourceImports} from './source-imports.mjs';
 import {saveWorkspace} from './workspace-storage.mjs';
 import {mergeSources,resolveSourceConflict} from './source-revisions.mjs';
 import {workspaceBackup,restoreWorkspace} from './workspace-backup.mjs';
@@ -118,8 +119,15 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{if(e.target.dataset.review){const id=e.target.dataset.review;state.reviewed=state.reviewed.filter(x=>x!==id);if(e.target.checked)state.reviewed.push(id);else state.approved=false;persist();updateSummary();}});
 $('#sources').onclick=()=>{$('#source-input').value=JSON.stringify(state.source,null,2);$('#import-error').textContent='';$('#import-dialog').showModal();};
-$('#source-file').onchange=async e=>{const f=e.target.files[0];if(f){if(f.size>2_000_000){$('#import-error').textContent='Source file must be smaller than 2 MB.';return;}$('#source-input').value=await f.text();}};
-$('#generate').onclick=()=>{try{const source=JSON.parse($('#source-input').value);validateSource(source);mergeSource(source);$('#import-dialog').close();}catch(err){$('#import-error').textContent=err.message;}};
+let importingSources=false;
+$('#source-file').onchange=async e=>{
+ const files=[...e.target.files];if(!files.length)return;
+ importingSources=true;$('#generate').disabled=true;$('#source-file').disabled=true;$('#import-error').textContent='Reading source files…';
+ try{const imports=await Promise.all(files.map(importSourceFile)),result=combineSourceImports(JSON.parse($('#source-input').value),imports);$('#source-input').value=JSON.stringify(result.source,null,2);$('#import-error').textContent=`Ready to compare: ${result.source.slides.length} slides; ${result.source.slides.filter(s=>s.notes.trim()).length} with notes. ${result.warnings.join(' ')}`;}
+ catch(error){$('#import-error').textContent=error.message+' The source package and draft were not changed.';}
+ finally{importingSources=false;$('#generate').disabled=false;$('#source-file').disabled=false;e.target.value='';}
+};
+$('#generate').onclick=()=>{if(importingSources)return;try{const source=JSON.parse($('#source-input').value);validateSource(source);mergeSource(source);$('#import-dialog').close();}catch(err){$('#import-error').textContent=err.message;}};
 $('#download-source').onclick=()=>download('lesson-source-template.json',JSON.stringify(fixture,null,2),'application/json');
 $('#save-activity').onclick=()=>{try{const id=addActivity(state.draft,{id:'local-activity-'+crypto.randomUUID(),title:$('#activity-title').value,duration:Number($('#activity-minutes').value)});changed('activity:'+id);$('#activity-dialog').close();openEditor('activity:'+id);notice('Activity added. Add teaching sections to complete it.');}catch(error){$('#activity-error').textContent=error.message;}};
 $('#save-addition').onclick=()=>{try{
@@ -141,3 +149,6 @@ render();
 
 $('#workspace-backup').onclick=()=>download('lesson-workspace-backup.json',JSON.stringify(workspaceBackup(state),null,2),'application/json');
 $('#workspace-restore').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>32000000)throw Error('Choose a workspace backup smaller than 32 MB.');const id=crypto.randomUUID();restoreWorkspace(localStorage,await file.text(),id);const target=new URL(location.href);target.searchParams.set('workspace',id);location.href=target;}catch(error){notice('Backup was not opened. '+error.message+' Your current workspace is unchanged.');}finally{e.target.value='';}};
+
+const pendingSourceId=new URL(location.href).searchParams.get('sourceImport');
+if(pendingSourceId){try{const item=JSON.parse(localStorage.getItem('lesson-studio-pending-source-'+pendingSourceId));if(!item)throw Error('The imported deck is no longer available. Import it again from its Slides tab.');const result=combineSourceImports(state.source,[item]);$('#source-input').value=JSON.stringify(result.source,null,2);$('#import-error').textContent=`Imported ${result.source.slides.length} slides. ${result.warnings.join(' ')} The current brief remains in the package; review it or choose a Notion brief before generating.`;$('#import-dialog').showModal();}catch(error){notice(error.message);}}

@@ -14,15 +14,16 @@ export function convertNotes(input){
 export function validateSource(x){
  if(!x||typeof x.title!=='string'||!x.title.trim())throw Error('Provide a lesson title.');
  if(!Array.isArray(x.slides)||!x.slides.length)throw Error('Provide at least one slide with speaker notes.');
+ if(x.importWarnings!==undefined&&(!Array.isArray(x.importWarnings)||x.importWarnings.some(w=>typeof w!=='string')))throw Error('Import warnings must be a list of text.');
  const ids=new Set(); for(const s of x.slides){if(typeof s.id!=='string'||!s.id||ids.has(s.id))throw Error('Each slide needs a unique stable id.');ids.add(s.id);if(typeof s.notes!=='string'||!Number.isInteger(s.number))throw Error('Each slide needs a number and notes text.');}
- for(const k of ['teacherOverview','studentOverview','preparation','purpose'])if(x[k]!==undefined&&typeof x[k]!=='string')throw Error(`${k} must be text.`);
+ for(const k of ['teacherOverview','studentOverview','preparation','purpose','assessmentOpportunities'])if(x[k]!==undefined&&typeof x[k]!=='string')throw Error(`${k} must be text.`);
  for(const k of ['objectives','vocabulary','resources'])if(x[k]!==undefined&&!Array.isArray(x[k]))throw Error(`${k} must be a list.`);
  if(x.objectives?.some(o=>typeof o!=='string'))throw Error('Objectives must contain text.');
  for(const r of x.resources||[]){if(!r.name||!r.type||!r.audience)throw Error('Resources need name, type, and audience.');let u;try{u=new URL(r.url);}catch{throw Error('Resource URL must use https.');}if(u.protocol!=='https:')throw Error('Resource URL must use https.');if(r.type==='Answer Key'&&r.audience==='Student')throw Error('Answer Key resources cannot have Student audience.');}
  return x;
 }
 export function generate(source){
- validateSource(source); const activities=[],sections=[],warnings=[];let current;
+ validateSource(source); const activities=[],sections=[],warnings=[...(source.importWarnings||[])];let current;
  const ensureActivity=()=>{if(!current){current={id:'unassigned',title:'Unassigned activity',duration:0};activities.push(current);warnings.push('No activity heading found before the first content slide. Review grouping and timing.');}};
  for(const slide of source.slides){
   let notes=slide.notes.trim();if(!notes)continue;
@@ -41,7 +42,7 @@ export function generate(source){
  for(const a of activities){const subtotal=sections.filter(s=>s.activityId===a.id).reduce((n,s)=>n+s.duration,0);if(subtotal>a.duration)warnings.push(`${a.title}: section timing exceeds activity timing.`);}
  for(const k of ['teacherOverview','studentOverview','preparation'])if(!source[k]?.trim())warnings.push(`${k} is missing. Add or explicitly review this field.`);
  if(!source.objectives?.length)warnings.push('No objectives supplied.');if(!source.resources?.length)warnings.push('No resource records supplied.');
- return {schemaVersion:1,title:source.title,course:source.course||'',frontMatter:{teacherOverview:source.teacherOverview||'',studentOverview:source.studentOverview||'',objectives:source.objectives||[],preparation:source.preparation||'',vocabulary:source.vocabulary||[],purpose:source.purpose||'',assessmentOpportunities:''},resources:structuredClone(source.resources||[]),activities,sections,duration:activities.reduce((n,a)=>n+a.duration,0),warnings};
+ return {schemaVersion:1,title:source.title,course:source.course||'',frontMatter:{teacherOverview:source.teacherOverview||'',studentOverview:source.studentOverview||'',objectives:source.objectives||[],preparation:source.preparation||'',vocabulary:source.vocabulary||[],purpose:source.purpose||'',assessmentOpportunities:source.assessmentOpportunities||''},resources:structuredClone(source.resources||[]),activities,sections,duration:activities.reduce((n,a)=>n+a.duration,0),warnings};
 }
 export function objectivesEqual(a,b){
  return Array.isArray(a)&&Array.isArray(b)&&JSON.stringify([...a].sort())===JSON.stringify([...b].sort());

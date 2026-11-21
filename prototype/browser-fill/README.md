@@ -1,3 +1,7 @@
+## Release 0.12.0 source imports
+
+The popup now opens the lesson workspace and imports the current signed-in Google Slides deck read-only. The source reader exports only the selected presentation, validates its PowerPoint archive and speaker notes, then opens an explicit source review. It uses the same activeTab/scripting permissions. Combine it with a Notion Markdown export in the workspace. File imports and serialized reader checks pass; installed-extension execution is still awaiting permitted browser access. Browser policy currently blocks extension URLs, so this session did not reload the installed companion.
+
 ## Release 0.11.0 save behavior
 
 New transfer reviews use the native editor's **Save and Keep Editing** control after the existing final baseline and capture checks. Approval binds this method as well as the intended content. The companion records the attempt first, clicks once, and independently rereads saved data. Missing acknowledgement never causes fallback or resend. Legacy reports retain their transport and remain readback-only after an attempt.
@@ -12,14 +16,14 @@ The **Lesson Studio native companion** lives in the parent `prototype` folder. I
 
 1. Run the local workspace with `npm start` from `prototype` when you need local editing/export or the isolated demo. The unpacked extension itself loads files from this checkout.
 2. In Edge or Chrome extension management, enable Developer mode and choose **Load unpacked**. Select the **parent `prototype` directory**, containing `manifest.json`; do not select `browser-fill` or `api-companion`.
-3. When updating this checkout, reload the installed extension and reopen its transfer screen. Current version: **0.10.5**. Preserve/download any current evidence first. No private review package or save authorization ships in this clone.
+3. When updating this checkout, reload the installed extension and reopen its transfer screen. Current version: **0.12.0**. Preserve/download any current evidence first. No private review package or save authorization ships in this clone.
 4. Sign in to Level Builder normally and open the exact owned practice lesson's canonical editor: `https://levelbuilder-studio.code.org/lessons/ID/edit`.
 
 No API key, copied credentials or additional host permissions are needed. Official source lessons remain read-only. A local package approval is not approval to save remotely.
 
 ## Read a selected practice baseline without a package
 
-Open the selected canonical editor, launch **Open reusable lesson transfer** from its companion, confirm the practice URL and permission, then choose **Read baseline only and download report**. Leave the package picker empty. The message immediately beside the button shows Companion 0.10.5 at startup, current read progress, and any exact error. Download baseline report remains available for early read failures; if an automatic download does not appear, use that button. If the controls still say Loading companion controls or show an older version, close the transfer screen, reload the installed extension and open a fresh screen from the practice editor. It reads fresh saved data and the current editor and downloads private evidence; it does not stage changes, check unit-level usage or save. Stale baselines, unsaved edits and blockers remain visible in the report. The old popup read button stays restricted to its historical assigned lesson; use this new screen for another selected practice lesson.
+Open the selected canonical editor, launch **Open reusable lesson transfer** from its companion, confirm the practice URL and permission, then choose **Read baseline only and download report**. Leave the package picker empty. The message immediately beside the button shows the installed companion version at startup, current read progress, and any exact error. Download baseline report remains available for early read failures; if an automatic download does not appear, use that button. If the controls still say Loading companion controls or show an older version, close the transfer screen, reload the installed extension and open a fresh screen from the practice editor. It reads fresh saved data and the current editor and downloads private evidence; it does not stage changes, check unit-level usage or save. Stale baselines, unsaved edits and blockers remain visible in the report. The old popup read button stays restricted to its historical assigned lesson; use this new screen for another selected practice lesson.
 
 ## Prepare a reusable transfer
 

@@ -1,6 +1,6 @@
 # CodeAI Level Builder Prototype
 
-Lesson Studio turns normalized source JSON into a local lesson draft for preview, focused editing, issue flags, approval and export. The native browser companion prepares an exact destination review and supports a separately approved, guarded save. The API comparison extension is a separate read-only tool.
+Lesson Studio turns Slides PowerPoint exports, Notion briefs and normalized source JSON into a local lesson draft for preview, focused editing, issue flags, approval and export. The native browser companion prepares an exact destination review and supports a separately approved, guarded save. The API comparison extension is a separate read-only tool.
 
 ## Start here
 
@@ -19,7 +19,9 @@ Run the engineering checks from `prototype`:
 node --test --test-isolation=none
 ```
 
-Latest delivery check: **202 passed, 0 failed**. These checks are not independent curriculum acceptance.
+Latest delivery check: **212 passed, 0 failed**. These checks are not independent curriculum acceptance.
+
+Release **0.12.0** adds combined source imports and a read-only signed-in Slides import control. File imports were checked against the real source deck and Notion brief. Installed-extension reload and live workflow acceptance remain blocked by browser access policy.
 
 ## Delivery guide
 
