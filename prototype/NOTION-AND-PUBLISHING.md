@@ -1,3 +1,7 @@
+# Live reader repair — 0.15.2
+
+**298 tests pass.** The first shared-record live check safely stopped before creation because the reader expected `data-unit-for-lesson`; the deployed editor uses `data-unitforlesson`. Both serialized scope readers and their previously over-permissive fixtures are corrected. Reload the existing companion to 0.15.2 before retrying the same approved test package. No shared records or lesson save occurred in the failed attempt. Installed/live acceptance of the repaired path remains pending; the association save still requires its separate review. See [the handoff](../NEXT-SESSION-HANDOFF.md).
+
 # Shared-record validation — 0.15.1
 
 **297 automated tests pass, zero failures.** Completed the shared-review controller checks and serialized native search/association/reload checks deferred by 0.15.0. Fixed ambiguous same-label record selection and preserved expanded details and keyboard focus through approval and periodic refresh. The actual review screen passed a synthetic browser check, including a 390-pixel layout and no console errors.

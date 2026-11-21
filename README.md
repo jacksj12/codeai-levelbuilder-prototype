@@ -19,7 +19,7 @@ Run the engineering checks from `prototype`:
 node --test --test-isolation=none
 ```
 
-Latest checkpoint: **0.15.1, 297 tests passed, 0 failed**. Shared-resource/vocabulary create-or-reuse review and guarded association publishing are implemented with automated coverage; controller and serialized native-control checks are complete, including ambiguous-label rejection and stable keyboard review. Live acceptance of the new path remains pending. See [shared-record validation](prototype/SHARED-RECORD-VALIDATION.md). The complete publishing build is still unfinished. See [the handoff](NEXT-SESSION-HANDOFF.md) for remaining scope. These checks are not independent curriculum acceptance.
+Latest checkpoint: **0.15.2, 298 tests passed, 0 failed**. The deployed course-scope attribute reader is corrected after the first safe live-check failure. Shared-resource/vocabulary create-or-reuse review and guarded association publishing are implemented with automated coverage; controller and serialized native-control checks are complete, including ambiguous-label rejection and stable keyboard review. Live acceptance of the new path remains pending. See [shared-record validation](prototype/SHARED-RECORD-VALIDATION.md). The complete publishing build is still unfinished. See [the handoff](NEXT-SESSION-HANDOFF.md) for remaining scope. These checks are not independent curriculum acceptance.
 
 Release **0.12.0** adds combined source imports and a read-only signed-in Slides import control. File imports were checked against the real source deck and Notion brief. Installed-extension reload and live workflow acceptance remain blocked by browser access policy.
 

@@ -1,3 +1,21 @@
+# Live course-scope reader repair — 0.15.2
+
+The first 0.15.1 shared-record live attempt stopped before record creation: the companion reported “The native lesson course scope is unavailable.” No shared review/creation receipt, lesson save receipt, or recovery requirement exists in the downloaded failure reports. The initial package comparison's missing-resource/vocabulary errors were expected before shared-record mapping; the course-scope error was a reader defect.
+
+Read-only inspection of the designated live editor found one `script[data-lesson][data-unitforlesson]` with courseVersionId 1198, and no `script[data-lesson][data-unit-for-lesson]`. Both serialized readers had incorrectly expected the latter. Corrected shared creation/search context and native association lookup to use the deployed attribute. The Haml template supplies unitForLesson; its HTML attribute is lowercased, not converted to extra hyphens. No live DOM changes, injected writer, direct credentialed requests or extension-page workaround were used.
+
+The old test doubles accepted any script selector and returned scope for any non-lesson attribute, hiding this defect. They now require the exact deployed selector/attribute. Added missing, incorrectly hyphenated, malformed and null scope checks that refuse before any request. Full suite: **298 passed, 0 failed**. Manifest 0.15.2, unarmed verification-release-25, same permissions.
+
+## Resume the live test
+
+The user approved creation/reuse of the exact Teacher Handout and vocabulary named “Lesson Studio live check 8898985.” Approval remains valid for those records; it does not approve the lesson association save. Keep the approved private package unchanged. Source 0.15.2 is ready locally; installed extension is last observed at 0.15.1 and needs a manual reload because browser policy blocks extension-page control.
+
+Reload the existing unpacked companion, close the failed transfer screen and open a fresh one from lesson 8898985's canonical editor. Select the same approved package, choose Check shared records, then the separate create-once control for the two already-authorized records. Continue to lesson review only after both verify; download the report and stop before saving. Check the exact association review and complete original-editor restoration before requesting save approval. If a creation becomes uncertain, recheck without resending.
+
+Protected lesson 8898984 and its four levels remain untouched. The disposable lesson 8898985 retains its existing three activities, ten sections, six callouts and zero level links. Private baseline/error reports and test packages remain outside Git. No new live acceptance is claimed for the repaired path. The broader unsupported roadmap remains unchanged.
+
+Earlier entries below are historical.
+
 # Shared-record validation completed locally — 0.15.1
 
 This entry supersedes the 0.15.0 resume checklist for local tests and rendered inspection. The broader publishing roadmap remains unfinished. Work is in the GitHub checkout; the ChatGPT folder holds private QA scripts/screenshots only.
