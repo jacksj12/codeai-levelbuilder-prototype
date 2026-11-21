@@ -1,3 +1,32 @@
+# Shared-record validation completed locally — 0.15.1
+
+This entry supersedes the 0.15.0 resume checklist for local tests and rendered inspection. The broader publishing roadmap remains unfinished. Work is in the GitHub checkout; the ChatGPT folder holds private QA scripts/screenshots only.
+
+## Completed
+
+- Added four actual workflow-controller tests for separate creation approval, retained attempts/reload, read-only rechecks of uncertain outcomes, package replacement, stale saved baselines and durable-storage failure. Approval and timer updates retain the same expanded detail nodes.
+- Added six tests executing the real serialized native bridge against native-shaped resource/vocabulary tables and React Select events. Coverage includes collapsed panels, exact association, repeat refusal, stale captures/course scope, capped search, duplicate labels/options, absent options, outside edits, no-op clicks, observer cleanup and outside-edit recovery refusal.
+- Full resource and vocabulary rehearsals now run through the real serialized association control and separately authorized reload restoration in the fixture. They verify exact original capture restoration and no destructive or lesson-write request. These are fixtures, not installed-extension acceptance.
+- Fixed a reproduced identity ambiguity: records with distinct IDs/metadata can share a native dropdown label. Independent scoped search now rejects duplicate labels before lookup/selection, even when the native dropdown displays only one of them.
+- Fixed a reproduced review interaction bug: approval and the 15-second refresh replaced the entire record list, collapsing details and losing keyboard focus. Stable reviews now retain their detail nodes and update expiry text in place. Added shared-detail wrapping and visible summary focus.
+- Browser-tested the actual screen with a synthetic native boundary: check → expand details → keyboard approval → one simulated creation per record → read-only recheck. The details remained open, Tab reached the creation/continue controls, the 390 × 844 viewport had no horizontal overflow, and no console errors were reported. Temporary fixture server runs only on loopback port 43836; it is not a distributed/live writer. Screenshot is private in the ChatGPT evidence workspace.
+
+## Validation
+
+Full suite: **297 passed, 0 failed**, `node --test --test-isolation=none --test-reporter=spec`. Source companion 0.15.1, unarmed verification-release-24; no added permissions. Ten new tests extend the previous 287. The extension dependency/package check also passes. Private sources, screenshots, reports and credentials are excluded from commits.
+
+## Live handoff and remaining work
+
+The user explicitly designated `https://levelbuilder-studio.code.org/courses/6-12-dev-playground/units/16/lessons/11` as the disposable practice destination for this new live test. Its observed Edit link opened `/s/scottsdale-levelbuilder-exploration/lessons/11/edit`; the native Add Rubric link identified **8898985**. It is populated despite its “Cleared” title. Preserve current teaching content. This is distinct from protected accepted lesson **8898984** and levels 104255 / 104271 / 104272 / 104273, which remain untouched.
+
+Agent access to the retained extension page was rejected by browser URL policy (only http/https permitted). Do not bypass this through injected code, another browser-control surface, or direct credentialed requests. No new extension reload or live acceptance was performed; installed version remains last verified at 0.12.3. This is an access limit, not a request to repeat the user's destination authorization.
+
+Next concrete step: the user reloads the existing unpacked companion from this checkout after downloading retained reports, opens the canonical practice editor `https://levelbuilder-studio.code.org/lessons/8898985/edit`, opens a fresh reusable transfer screen, confirms that destination, and chooses **Read baseline only and download report**. Retain that private report outside Git. Prepare a minimal destination-bound test package and exact record list from the fresh baseline before requesting creation approval. Shared records save immediately and need their own approval; a subsequent lesson association save needs its separate exact review. Never click native vocabulary Delete to undo a rehearsal. No new record creation or lesson-save authorization has been consumed by this session.
+
+Still unimplemented: shared-record edits/deletions with ownership/impact review, saved objective/content removals, replacement/reordering of populated level links, asset uploads, and production destinations. Do not remove those guards or call the full build complete. Keep the existing localhost:4316 OAuth server running; it was not restarted.
+
+Earlier entries below retain historical evidence.
+
 # Shared-record publishing checkpoint — 0.15.0
 
 This is a tested implementation checkpoint, not completion of the full publishing build. The user requested commit, push, status and handoff before further implementation. No live lesson was staged, saved, reloaded or deleted during this work; preserve lesson 8898984 and levels 104255 / 104271 / 104272 / 104273.

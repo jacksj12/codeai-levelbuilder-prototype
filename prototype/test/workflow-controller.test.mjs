@@ -150,3 +150,78 @@ test('HTTP 200 failure screen retains exact evidence across reload and never res
  ui=await load(store,run);
  try{for(let i=0;i<3;i++)await ui.get('check').onclick();const state=readTransferRecord(store,key);assert.equal(state.demo.sendCount,1);assert.equal(state.receipt.status,'save-not-confirmed');assert.equal(state.receipt.saveRetried,false);assert.equal(ui.get('save').disabled,true);}finally{ui.restore();}
 });
+
+
+// Native companion controller checks use a simulated browser boundary. No live requests.
+function sharedScreenHarness(store,run,{uncertain=false}={}){
+ const demo=createDemo({title:'Shared controller fixture',objectives:['Explain evidence'],resources:[],slides:[{id:'a',number:1,notes:'Activity (5 minutes)'},{id:'s',number:2,notes:'Discuss evidence'}]});
+ demo.pkg.lesson.resources=[{key:'guide',name:'Evidence guide',type:'Handout',audience:'Student',url:'https://example.org/guide'}];
+ demo.pkg.lesson.frontMatter.vocabulary=[{word:'Evidence',definition:'Support for a claim.'}];demo.pkg.baseline=structuredClone(demo.pkg.lesson);
+ const destination=demo.destination,catalog={resources:[],vocabularies:[]},calls=[];let posts=0;
+ const key='reviewed-transfer-session-'+run;
+ store.setItem(key,JSON.stringify({mode:'native',tabId:33,pkg:demo.pkg,destination,practiceConfirmed:true}));
+ const overrides={location:new URL('chrome-extension://test/browser-fill/workflow.html?run='+run+'#33'),chrome:{
+  runtime:{getManifest:()=>({version:'0.15.1'})},tabs:{get:async()=>({id:33,url:destination.url,discarded:false})},
+  scripting:{executeScript:async({func,args})=>{
+   const request=JSON.parse(args[0]);calls.push({bridge:func.name,action:request.action});let result;
+   if(func.name==='sharedRecordBridge'){
+    if(request.action==='context')result={destination,courseVersionId:77,saved:structuredClone(demo.server)};
+    else if(request.action==='search')result=structuredClone(catalog[request.kind]);
+    else if(request.action==='create'){
+     assert.equal(request.approval.reviewId,request.review.id);assert.equal(request.approval.approved,true);posts++;
+     if(uncertain)result={outcome:'unknown'};
+     else {const record={id:800+posts,key:request.item.kind+'-'+posts,markdownKey:'record-'+posts+'/course/version',...structuredClone(request.item.intent),...(request.item.kind==='resources'?{isRollup:false}:{})};catalog[request.item.kind].push(record);result={outcome:'response-received',record};}
+    }else throw Error('Unexpected shared action '+request.action);
+   }else if(func.name==='readAssignedLesson')result={lesson:structuredClone(demo.server),originalLessonJson:JSON.stringify(demo.server)};
+   else {assert.equal(request.action,'read');result=structuredClone(demo.editor);}
+   return [{result}];
+  }}
+ }};
+ return {demo,catalog,calls,key,overrides,get posts(){return posts;},load:()=>load(store,run,overrides)};
+}
+
+test('shared screen requires exact approval, retains creation across reload and rechecks without POST or lesson save',async()=>{
+ const store=storage(),h=sharedScreenHarness(store,'shared-complete');let ui=await h.load();
+ try{
+  await ui.get('prepare-shared').onclick();assert.equal(ui.get('shared-panel').hidden,false);assert.equal(ui.get('create-shared').disabled,true);
+  await ui.get('create-shared').onclick();assert.equal(h.posts,0);assert.match(ui.get('status').textContent,/approve/);
+  const detail=ui.get('shared-review').children[2];detail.open=true;
+  ui.get('approve-shared').checked=true;ui.get('approve-shared').onchange();assert.equal(ui.get('create-shared').disabled,false);
+  for(const tick of ui.timers)tick();assert.equal(ui.get('shared-review').children[2],detail);assert.equal(detail.open,true);
+  await ui.get('create-shared').onclick();assert.equal(h.posts,2);assert.equal(readTransferRecord(store,h.key).sharedReceipt.status,'shared-records-verified');assert.equal(ui.get('continue-shared').disabled,false);
+  await ui.get('create-shared').onclick();assert.equal(h.posts,2);
+ }finally{ui.restore();}
+ ui=await h.load();
+ try{assert.equal(ui.get('create-shared').disabled,true);await ui.get('check-shared').onclick();assert.equal(h.posts,2);assert.equal(ui.get('continue-shared').disabled,false);assert.ok(h.calls.every(c=>c.bridge==='sharedRecordBridge'||c.action==='read'));}finally{ui.restore();}
+});
+
+test('uncertain shared creation survives reload and read-only checks never create remaining records',async()=>{
+ const store=storage(),h=sharedScreenHarness(store,'shared-uncertain',{uncertain:true});let ui=await h.load();
+ try{await ui.get('prepare-shared').onclick();ui.get('approve-shared').checked=true;await ui.get('create-shared').onclick();assert.equal(h.posts,1);assert.equal(readTransferRecord(store,h.key).sharedReceipt.status,'creation-not-confirmed');assert.equal(ui.get('continue-shared').disabled,true);}finally{ui.restore();}
+ ui=await h.load();
+ try{for(let i=0;i<2;i++)await ui.get('check-shared').onclick();assert.equal(h.posts,1);assert.equal(ui.get('continue-shared').disabled,true);await ui.get('prepare-shared').onclick();ui.get('approve-shared').checked=true;await ui.get('create-shared').onclick();assert.equal(h.posts,1);}finally{ui.restore();}
+});
+
+test('replacing a package clears shared review and approval, retaining durable creation evidence',async()=>{
+ const store=storage(),h=sharedScreenHarness(store,'shared-replace'),ui=await h.load();
+ try{
+  await ui.get('prepare-shared').onclick();ui.get('approve-shared').checked=true;await ui.get('create-shared').onclick();
+  const retained=[...store.data.keys()].filter(k=>k.startsWith('native-shared-record-'));assert.equal(retained.length,2);
+  ui.get('practice').checked=false;const pkg=structuredClone(h.demo.pkg);pkg.lesson.title='Replacement';pkg.baseline=structuredClone(pkg.lesson);
+  ui.get('package-file').files=[{name:'replacement.json',size:100,text:async()=>JSON.stringify(pkg)}];await ui.get('package-file').onchange();
+  const state=readTransferRecord(store,h.key);assert.equal(state.sharedReview,undefined);assert.equal(state.sharedApproval,undefined);assert.equal(state.sharedReceipt,undefined);assert.equal(ui.get('approve-shared').checked,false);
+  for(const key of retained)assert.ok(store.data.has(key));await ui.get('create-shared').onclick();assert.equal(h.posts,2);
+ }finally{ui.restore();}
+});
+
+test('shared controller refuses stale baselines and failed durable storage before creating',async()=>{
+ for(const mode of ['baseline','storage']){
+  const store=storage(),h=sharedScreenHarness(store,'shared-block-'+mode),ui=await h.load();
+  try{await ui.get('prepare-shared').onclick();ui.get('approve-shared').checked=true;
+   if(mode==='baseline')h.demo.server.overview='Outside saved change';
+   else {const write=store.setItem;store.setItem=(key,value)=>{if(key.startsWith('native-shared-record-'))throw Error('quota');write(key,value);};}
+   await ui.get('create-shared').onclick();assert.equal(h.posts,0);assert.match(ui.get('status').textContent,mode==='baseline'?/older saved baseline/:/evidence could not be saved/);
+   if(mode==='storage'){assert.equal(ui.get('create-shared').disabled,true);assert.equal(ui.get('download').disabled,false);}
+  }finally{ui.restore();}
+ }
+});

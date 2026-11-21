@@ -3,3 +3,8 @@
 .flow .steps li{background:var(--surface-soft);color:var(--muted)}.flow .steps li.active{background:var(--nav);color:white}.flow th,.flow .summary span{color:var(--muted);font-size:.9375rem}.flow .success{color:var(--success-ink);background:var(--selected)}.flow #status{color:var(--ink)}.flow td,.flow th{border-color:var(--line)}@media(max-width:650px){.flow table{font-size:.9375rem}.flow td,.flow th{padding:10px 6px;overflow-wrap:anywhere}}
 
 #changes pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: .75rem; background: #f4f5f6; }
+
+.flow #shared-review { overflow-wrap: anywhere; }
+.flow #shared-review details { margin-block: 1rem; }
+.flow #shared-review summary { cursor: pointer; }
+.flow #shared-review summary:focus-visible { outline: 2px solid var(--nav); outline-offset: 4px; }

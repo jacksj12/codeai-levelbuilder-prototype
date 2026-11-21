@@ -118,6 +118,7 @@ function render(){
  }
 }
 function sharedLocked(){return busy||!!state.job||!!state.receipt||!!state.needsRecovery;}
+let sharedRenderedId,sharedExpiryNote;
 function renderShared(){
  $('shared-panel').hidden=!native||!state.pkg;
  const locked=sharedLocked(),review=state.sharedReview,expired=review&&Date.now()>review.expiresAt;
@@ -127,10 +128,15 @@ function renderShared(){
  $('create-shared').disabled=locked||!review||expired||!!state.sharedApproval||!$('approve-shared').checked;
  $('check-shared').disabled=locked||!review||!state.sharedApproval;
  $('continue-shared').disabled=locked||state.sharedReceipt?.status!=='shared-records-verified';
- const list=$('shared-review');list.replaceChildren();
- if(review){el('p','Course version '+review.courseVersionId+' · '+review.destination.url,list);el('p',expired?'Review expired. Check shared records again before creating anything.':'Creation approval expires at '+new Date(review.expiresAt).toLocaleTimeString()+'.',list);
- for(const item of review.items){const d=el('details','',list);el('summary',(item.action==='reuse'?'Reuse: ':'Create: ')+(item.kind==='resources'?item.intent.name:item.intent.word),d);if(item.kind==='resources'){for(const field of ['type','audience','url'])el('p',field+': '+item.intent[field],d);if(item.action==='create')el('p','Shown in resource dropdowns; no download URL, PDF inclusion, assessment flag or curriculum category.',d);}else el('p',item.intent.definition,d);if(item.record)el('p','Existing record '+item.record.id+' · all shared settings retained.',d);}
+ const list=$('shared-review');
+ // Approval and expiry updates must keep open details and keyboard focus intact.
+ if(sharedRenderedId!==(review?.id||null)){
+  sharedRenderedId=review?.id||null;sharedExpiryNote=null;list.replaceChildren();
+  if(review){el('p','Course version '+review.courseVersionId+' · '+review.destination.url,list);sharedExpiryNote=el('p','',list);
+   for(const item of review.items){const d=el('details','',list);el('summary',(item.action==='reuse'?'Reuse: ':'Create: ')+(item.kind==='resources'?item.intent.name:item.intent.word),d);if(item.kind==='resources'){for(const field of ['type','audience','url'])el('p',field+': '+item.intent[field],d);if(item.action==='create')el('p','Shown in resource dropdowns; no download URL, PDF inclusion, assessment flag or curriculum category.',d);}else el('p',item.intent.definition,d);if(item.record)el('p','Existing record '+item.record.id+' · all shared settings retained.',d);}
+  }
  }
+ if(sharedExpiryNote)sharedExpiryNote.textContent=expired?'Review expired. Check shared records again before creating anything.':'Creation approval expires at '+new Date(review.expiresAt).toLocaleTimeString()+'.';
  $('shared-status').textContent=state.sharedReceipt?(state.sharedReceipt.status==='shared-records-verified'?'Every shared record is verified. Continue to the separate lesson review; the lesson has not been saved.':'Creation is not confirmed. Recheck reads only; it cannot create or resend records.'):state.sharedApproval?'An approved creation run is retained. Recheck records before continuing.':'No shared-record creation attempted.';
 }
 async function sharedIO(){

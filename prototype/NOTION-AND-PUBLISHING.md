@@ -1,3 +1,11 @@
+# Shared-record validation — 0.15.1
+
+**297 automated tests pass, zero failures.** Completed the shared-review controller checks and serialized native search/association/reload checks deferred by 0.15.0. Fixed ambiguous same-label record selection and preserved expanded details and keyboard focus through approval and periodic refresh. The actual review screen passed a synthetic browser check, including a 390-pixel layout and no console errors.
+
+Installed-extension acceptance of this new path is still pending. The user designated unit 16 / lesson 11 as disposable for testing; its native editor identifies lesson **8898985**, separate from protected lesson **8898984**. Browser policy blocks agent control of extension URLs. No new shared records, staging, save, cleanup, or protected-lesson changes occurred. Source is 0.15.1; installed version remains last verified at 0.12.3.
+
+Read [shared-record validation](SHARED-RECORD-VALIDATION.md) for executed checks and the manual live-test handoff. Shared-record editing/deletion, saved-content removals, replacement/reordering of saved level links, assets and production destinations remain unfinished and blocked. Earlier release notes below are historical.
+
 # Current implementation — 0.15.0 checkpoint
 
 **287 tests pass; the full publishing build remains unfinished.** Shared resources and vocabulary now have separate create-or-reuse review, durable create-once evidence, read-only rechecks, schema-4 package binding and a separately approved lesson association save. Rehearsal restoration uses guarded reload rather than the native vocabulary Delete action, which deletes shared records globally.

@@ -1,3 +1,11 @@
+# Shared-record validation — 0.15.1
+
+**297 automated tests pass, zero failures.** Completed the shared-review controller checks and serialized native search/association/reload checks deferred by 0.15.0. Fixed ambiguous same-label record selection and preserved expanded details and keyboard focus through approval and periodic refresh. The actual review screen passed a synthetic browser check, including a 390-pixel layout and no console errors.
+
+Installed-extension acceptance of this new path is still pending. The user designated unit 16 / lesson 11 as disposable for testing; its native editor identifies lesson **8898985**, separate from protected lesson **8898984**. Browser policy blocks agent control of extension URLs. No new shared records, staging, save, cleanup, or protected-lesson changes occurred. Source is 0.15.1; installed version remains last verified at 0.12.3.
+
+Read [shared-record validation](SHARED-RECORD-VALIDATION.md) for executed checks and the manual live-test handoff. Shared-record editing/deletion, saved-content removals, replacement/reordering of saved level links, assets and production destinations remain unfinished and blocked. Earlier release notes below are historical.
+
 # Current implementation — 0.15.0 checkpoint
 
 **287 tests pass; the full publishing build remains unfinished.** Shared resources and vocabulary now have separate create-or-reuse review, durable create-once evidence, read-only rechecks, schema-4 package binding and a separately approved lesson association save. Rehearsal restoration uses guarded reload rather than the native vocabulary Delete action, which deletes shared records globally.
@@ -33,7 +41,7 @@ npm start
 
 Open [Lesson workspace](http://127.0.0.1:4316) or [Transfer demo](http://127.0.0.1:4316/workflow.html). If occupied, set `$env:PORT='43834'` before `npm start` and use the printed address. Verify that startup serves this saved checkout's `prototype/dist`. The separate Documents/ChatGPT project folder is an older backup, not the build destination. Browser storage is separate for each hostname and port.
 
-From `prototype`, run `node --test --test-isolation=none`. The latest delivery check passes **241 tests**. Six controller checks exercise the real transfer-screen handlers with a minimal DOM: broader preparation/save/reload/recheck, storage failure, failed durable attempt storage, reload after storage fails following dispatch, confirmed read-only baseline export for a selected destination, and real serialized saved-reader errors before any capture. A package check resolves the local dependency graph from the extension/demo entry points and checks the manifest and unarmed default mode. They are controller simulations, not browser or live acceptance.
+From `prototype`, run `node --test --test-isolation=none`. The latest delivery check passes **297 tests**. The next paragraph records the earlier controller baseline; current shared-record coverage is described above. Six controller checks exercise the real transfer-screen handlers with a minimal DOM: broader preparation/save/reload/recheck, storage failure, failed durable attempt storage, reload after storage fails following dispatch, confirmed read-only baseline export for a selected destination, and real serialized saved-reader errors before any capture. A package check resolves the local dependency graph from the extension/demo entry points and checks the manifest and unarmed default mode. They are controller simulations, not browser or live acceptance.
 
 ## First use: review and export
 
@@ -42,9 +50,9 @@ From `prototype`, run `node --test --test-isolation=none`. The latest delivery c
 3. Export Markdown for copying or a JSON review package for comparison/transfer. Review packages contain applied lesson records and review evidence; they do not restore a full workspace.
 4. Use **Download workspace backup** before clearing browser data. **Open backup as separate workspace** validates the backup and opens an isolated workspace, preserving the original. Transfer receipts are separate from workspace backups.
 
-**Import sources** expects normalized source JSON with stable unique slide IDs, slide numbers, notes and the optional metadata shown in its template. Source JSON and exported review JSON are different formats. Direct authenticated Slides/Notion import is unfinished. Regeneration preserves local edits when sources are unchanged and asks for choices on conflicts and incoming deletions.
+**Import sources** expects normalized source JSON with stable unique slide IDs, slide numbers, notes and the optional metadata shown in its template. Source JSON and exported review JSON are different formats. Read-only signed-in Slides import is available through the companion; Notion OAuth import has live acceptance recorded in NOTION-AND-PUBLISHING.md. Regeneration preserves local edits when sources are unchanged and asks for choices on conflicts and incoming deletions.
 
-Local insertion controls support Level metadata, all five callout types, Code Doc, Resource, Slide, Image and Activity Section. These local editing capabilities do not imply native transfer support. Live shared-resource creation and image uploads are not connected. The preview is an approximation of Level Builder rendering; native file-picker automation remains unverified.
+Local insertion controls support Level metadata, all five callout types, Code Doc, Resource, Slide, Image and Activity Section. These local editing capabilities do not imply native transfer support. Shared-resource/vocabulary creation uses the separate reviewed companion path described above; image uploads remain unimplemented. The preview is an approximation of Level Builder rendering; native file-picker automation remains unverified.
 
 ## Delivery demo: no live writes
 
@@ -61,7 +69,7 @@ Optional **Repeat-test cleanup** separately reviews only receipt-owned level-lin
 
 ## Native companion: current scope
 
-See [installation and recovery](browser-fill/README.md). Load the parent `prototype` folder as an unpacked Edge/Chrome extension. The current manifest is **0.10.6**; reload the installed extension after updating the checkout. No extra host permissions were introduced.
+See [installation and recovery](browser-fill/README.md). Load the parent `prototype` folder as an unpacked Edge/Chrome extension. The current source manifest is **0.15.1**; reload the installed extension after updating the checkout. No extra host permissions were introduced.
 
 Before choosing a package, confirm the exact practice destination and choose **Read baseline only and download report**. This requires no package, captures fresh saved data and the open editor, and performs no staging, level-usage check or save. Keep the private downloaded report so the test package can be scoped to current content. Stale or unsaved content is reported without overwriting it.
 
@@ -71,11 +79,13 @@ Preparation checks fresh saved data against the open editor, rehearses supported
 
 | Reusable transfer supports | Blocks before staging |
 | --- | --- |
-| Overview, student overview, purpose, preparation, assessment opportunities | Objective, vocabulary and resource collection mutations |
+| Overview, student overview, purpose, preparation, assessment opportunities | Shared-record editing/deletion and saved-content removal |
 | Existing activity/section titles, whole-minute timing, section guidance and remarks | Reordering/removal of existing activities or sections |
 | Append-only activities, sections and all five callout types | Unsupported native controls or mappings |
-| Existing callout text/type where its section has one callout | Existing-callout edits in multi-callout sections |
-| Verified existing levels in empty existing/new progressions, including supported flags | Replacing populated progressions, unknown levels, unit conflicts |
+| Targeted existing callout text/type, including multi-callout sections | Unsupported or ambiguous native controls |
+| Existing objectives with explicit identity mappings; append-only objectives | Saved objective removal or ambiguous identity mapping |
+| Exact shared resources/vocabulary through separate create/reuse and association reviews | Shared-record edits/deletions or uncertain creation resend |
+| Verified existing levels in empty progressions; existing progression title/assessment edits | Replacing/reordering populated progressions, unknown levels, unit conflicts |
 
 Destination title, unlisted content, settings and existing record identities are preserved. Exact reviews include intentional blanks. The separate older bounded staging popup supports a narrower subset; capability blockers there apply to that path. The separate `api-companion` extension remains read-only.
 
