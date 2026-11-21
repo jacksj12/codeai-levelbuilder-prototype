@@ -79,7 +79,7 @@ export async function nativeEditorBridge(request={action:'read'}){
   if(req.method!=='PUT'||req.url!=='https://levelbuilder-studio.code.org/lessons/'+destination.id||req.contentType!=='application/json;charset=UTF-8')throw Error('The approved save target changed.');
   const payload=JSON.parse(req.body),semantic=structuredClone(payload);
   for(const key of ['objectives','activities','resources','vocabularies','programmingExpressions','standards','opportunityStandards','jitPlConceptIds','announcements','originalLessonData'])semantic[key]=JSON.parse(semantic[key]);
-  const approvedDigest=await fingerprint({method:req.method,url:req.url,contentType:req.contentType,payload:semantic,...(review.transport?{transport:review.transport}:{})});
+  const approvedDigest=await fingerprint({method:req.method,url:req.url,contentType:req.contentType,payload:semantic,...(review.transport?{transport:review.transport}:{}),...(review.preservationTest?{preservationTest:true}:{})});
   if(approvedDigest!==request.approval.approvedRequestDigest)throw Error('The request does not match the user-approved save.');
   const current=read();if(current.blockers.length||await fingerprint(current)!==request.expectedCaptureDigest)throw Error('The editor changed before saving.');
   const fresh=await fetch('/lessons/'+destination.id+'/edit',{credentials:'same-origin',redirect:'error',cache:'no-store'});

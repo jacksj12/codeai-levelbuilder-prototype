@@ -12,7 +12,8 @@ export function saveDiagnostics(receipt){
   if(summary.truncated)messages.push('The response identity list was truncated; counts describe the full response.');
  }else if(!native)messages.push(summary?'The response did not contain a readable lesson summary.':'This attempt did not retain a save-response summary. It cannot be reconstructed from a later readback.');
  let code='unconfirmed';
- if(verification?.passed){code='verified';messages.push('An independent saved read confirms the reviewed changes.');}
+ if(receipt.review?.preservationTest){code=verification?.passed&&receipt.nativeAcknowledgementConfirmed?'verified':'unconfirmed';messages.push(verification?.passed?'Independent readback confirms the entire lesson is unchanged.':'Independent readback has not confirmed complete preservation.');messages.push(receipt.nativeAcknowledgementConfirmed?'The native editor acknowledged this save.':'Native save acknowledgement is missing. Unchanged data alone cannot prove the save-dispatch test passed.');}
+ else if(verification?.passed){code='verified';messages.push('An independent saved read confirms the reviewed changes.');}
  else if(verification?.baselineUnchanged){code='unchanged';messages.push('Independent readback matches the pre-save baseline. The proposed changes are not present.');}
  else messages.push('Independent readback has not verified the complete reviewed result.');
  if(receipt.readbackError)messages.push('The latest independent saved read failed. Preserve the run report.');

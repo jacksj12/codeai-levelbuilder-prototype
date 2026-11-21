@@ -1,4 +1,4 @@
-import {clone,canonical,packageProblems} from './transfer-core.mjs';
+import {clone,canonical,digest,packageProblems} from './transfer-core.mjs';
 import {buildSaveReview,saveRequestDigest,validateSaveReview} from './save-review.mjs';
 import {runApprovedSave} from './approved-save.mjs';
 import {runAcceptedNativeRehearsal,recoverNativeLevelCheck} from './native-level-verification.mjs';
@@ -46,13 +46,21 @@ export async function prepareTransfer(pkg,io){
  const usage=await io.checkUsage(review);if(!usage.passed)throw Error('Levels already used in this unit: '+usage.conflicts.map(c=>c.name).join(', '));
  return {schemaVersion:1,kind:'reviewed-transfer-job',pkg:source,rehearsal,review};
 }
+export async function preparePreservationTest(io){
+ const {fresh,editor}=await readTransferBaseline(io),snapshot=normalizeNativeCapture(editor);
+ const plan={schemaVersion:1,kind:'browser-transfer-plan',destination:clone(snapshot.destination),packageDigest:await digest({purpose:'explicit-unchanged-native-save-test'}),destinationDigest:await digest(snapshot),operations:[],preserved:['Complete saved lesson, existing levels and all settings'],blockers:[],originalSnapshot:clone(snapshot),expectedLesson:clone(snapshot.lesson),remoteWrites:false,saveAllowed:false};plan.id=await digest(plan);
+ const rehearsal={status:'passed-and-restored',checksPassed:true,restored:true,plan,initialCapture:clone(editor),stagedCapture:clone(editor),finalCapture:clone(editor)};
+ const review=await buildSaveReview(rehearsal,fresh.lesson,{originalLessonJson:fresh.originalLessonJson,preservationTest:true});
+ return {schemaVersion:1,kind:'reviewed-transfer-job',rehearsal,review};
+}
+
 export async function approveTransfer(job){
  await validateSaveReview(job.review);
  return {...clone(job),approval:{approved:true,approvedRequestDigest:await saveRequestDigest(job.review),approvedAt:new Date().toISOString()}};
 }
 export function executeTransfer(job,io){
  return runApprovedSave(job,{...io,readEditor:()=>io.bridge({action:'read'}),send:request=>io.bridge(request),
-  stage:()=>runAcceptedNativeRehearsal(io.bridge,job.pkg,{leaveStaged:true,onProgress:io.onProgress,onCheckpoint:point=>io.checkpoint({status:'staging',stage:point})}),
+  stage:()=>job.review.preservationTest?io.bridge({action:'read'}).then(stagedCapture=>({status:'staged-unsaved',checksPassed:true,stagedCapture})):runAcceptedNativeRehearsal(io.bridge,job.pkg,{leaveStaged:true,onProgress:io.onProgress,onCheckpoint:point=>io.checkpoint({status:'staging',stage:point})}),
   recover:async()=>{const point=await io.loadCheckpoint();if(!point?.stage)throw Error('No owned staging checkpoint is available. Outside edits were preserved.');return recoverNativeLevelCheck(io.bridge,point.stage);}
  });
 }

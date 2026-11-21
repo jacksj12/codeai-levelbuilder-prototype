@@ -11,3 +11,8 @@ test('legacy missing response, wrong identity and readback failure remain distin
  assert.equal(saveDiagnostics({attempted:true,verification:{passed:true}}).code,'verified');
  assert.equal(saveDiagnostics(null).code,'not-attempted');
 });
+
+test('unchanged data without acknowledgement does not count as a verified preservation dispatch',()=>{
+ const report={attempted:true,review:{preservationTest:true},verification:{passed:true,baselineUnchanged:true},nativeAcknowledgementConfirmed:false};
+ assert.equal(saveDiagnostics(report).code,'unconfirmed');assert.ok(saveDiagnostics(report).messages.some(m=>m.includes('acknowledgement is missing')));report.nativeAcknowledgementConfirmed=true;assert.equal(saveDiagnostics(report).code,'verified');
+});

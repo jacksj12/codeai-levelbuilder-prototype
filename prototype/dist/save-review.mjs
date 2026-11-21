@@ -17,7 +17,7 @@ function replaceGroup(root,path,source){
 function comparableLesson(lesson){const value=clone(lesson);value.frontMatter.objectives.sort();return value;}
 
 // Pure preparation only. No networking, CSRF access, Save click or writer.
-export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),originalLessonJson,transport='native-editor'}={}){
+export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),originalLessonJson,transport='native-editor',preservationTest=false}={}){
  assert(rehearsal?.status==='passed-and-restored'&&rehearsal.checksPassed===true&&rehearsal.restored===true,'A completed and restored accepted-package rehearsal is required.');
  assert(['native-editor','direct-api'].includes(transport),'Unsupported save transport.');
  const plan=rehearsal.plan;await validatePlan(plan);
@@ -29,7 +29,7 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
  assert(canonical(initial)===canonical(rehearsal.finalCapture),'The rehearsal did not restore its complete original capture.');
  const normalized=normalizeNativeCapture(staged);assert(!normalized.blockers.length,normalized.blockers.join(' '));
  assert(canonical(normalized.lesson)===canonical(plan.expectedLesson),'The staged content does not match its reviewed transfer plan.');
- assert(plan.operations.length>0,'There are no reviewed changes to save.');
+ if(preservationTest){assert(transport==='native-editor'&&plan.operations.length===0&&canonical(staged)===canonical(initial),'Preservation tests must keep the entire editor unchanged and use the native save control.');}else assert(plan.operations.length>0,'There are no reviewed changes to save.');
  const scopes=appendedSections(plan),sectionAdditions=[],candidate=clone(freshSaved),changes=[],fieldChanges=[];
  const activityIndices=appendedActivities(plan),activityAdditions=[],calloutAdditions=[],tipScopes=appendedCallouts(plan);
  const projection=stripNewSections(staged,scopes);
@@ -79,7 +79,7 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
  const sections=normalized.lesson.activities.flatMap(a=>a.sections),levels=sections.flatMap(s=>s.progression?.levels||[]);
  const expectedCounts={activities:normalized.lesson.activities.length,sections:sections.length,callouts:sections.reduce((n,s)=>n+s.callouts.length,0),resources:normalized.lesson.resources.length,levels:levels.length,assessments:levels.filter(l=>l.assessment).length};
  const review={schemaVersion:1,kind:'native-save-review',status:'ready-for-review',createdAt:now,expiresAt:now+10*60*1000,
-  destination:clone(plan.destination),transport,remoteWrites:false,saveAllowed:false,requiresUserApproval:true,requiresRestaging:true,
+  destination:clone(plan.destination),transport,...(preservationTest?{preservationTest:true}:{}),remoteWrites:false,saveAllowed:false,requiresUserApproval:true,requiresRestaging:true,
   baselineDigest:await digest(freshSaved),stagedDigest:await digest(staged),rehearsalPlanId:plan.id,changes,fieldChanges,sectionAdditions,activityAdditions,calloutAdditions,
   request:{method:'PUT',url:'https://levelbuilder-studio.code.org/lessons/'+plan.destination.id,contentType:'application/json;charset=UTF-8',body:JSON.stringify(payload)},
   baseline:clone(freshSaved),baselineNativeProtection:clone(initial.protection),expectedLesson:clone(plan.expectedLesson),expectedCounts,
@@ -102,7 +102,7 @@ export async function saveRequestDigest(review){
  for(const key of ['objectives','activities','resources','vocabularies','programmingExpressions','standards','opportunityStandards','jitPlConceptIds','announcements','originalLessonData']){
   assert(typeof payload[key]==='string','Incomplete reviewed request field '+key+'.');payload[key]=JSON.parse(payload[key]);
  }
- return digest({method:request.method,url:request.url,contentType:request.contentType,payload,...(review.transport?{transport:review.transport}:{})});
+ return digest({method:request.method,url:request.url,contentType:request.contentType,payload,...(review.transport?{transport:review.transport}:{}),...(review.preservationTest?{preservationTest:true}:{})});
 }
 
 export async function validateStagedSaveReview(review,capture){

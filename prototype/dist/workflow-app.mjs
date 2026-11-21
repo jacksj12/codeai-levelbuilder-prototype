@@ -5,7 +5,7 @@ import {reviewWindow} from './transfer-status.mjs';
 import {readTransferRecord,writeTransferRecord} from './transfer-storage.mjs';
 import {clone} from './transfer-core.mjs';
 import {selectDestination} from './destination.mjs';
-import {readTransferBaseline,prepareTransfer,approveTransfer,executeTransfer} from './reusable-transfer.mjs';
+import {readTransferBaseline,prepareTransfer,preparePreservationTest,approveTransfer,executeTransfer} from './reusable-transfer.mjs';
 import {createDemo,demoAdapter} from './demo-transfer.mjs';
 import {recoverNativeLevelCheck} from './native-level-verification.mjs';
 import {saveRequestDigest} from './save-review.mjs';
@@ -43,6 +43,7 @@ function render(){
  $('destination-name').textContent=state.destination?(native?'Live practice destination: ':'Synthetic demo destination: ')+state.destination.url:'';
  $('load-failure-demo').hidden=!!state.demo;$('load-demo').hidden=!!state.demo;$('load-teaching-demo').hidden=!!state.demo;$('load-structure-demo').hidden=!!state.demo;$('new-demo').hidden=!state.demo;
  $('prepare').disabled=busy||!!state.receipt||!!state.needsRecovery;
+ $('prepare-preservation').disabled=busy||!!state.job||!!state.receipt||!!state.needsRecovery;
  $('read-baseline').disabled=busy||!!state.job||!!state.receipt||!!state.needsRecovery;
  $('read-baseline').textContent=baselineReading?'Reading baseline…':'Read baseline only and download report';
  $('read-baseline').setAttribute('aria-busy',String(baselineReading));
@@ -58,7 +59,8 @@ function render(){
  $('changes').replaceChildren();
  if(state.job){
   const review=state.job.review,levels=reviewedLevelGroups(review).flatMap(c=>c.addLevels),summary=el('div','',$('changes'));summary.className='summary';
-  for(const [value,label]of [[levels.length,'existing level links'],[levels.filter(l=>l.assessment).length,'assessments'],[0,'new level copies']]){const item=el('div','',summary);el('strong',value,item);el('span',label,item);}
+  for(const [value,label]of [[review.preservationTest?review.expectedCounts.levels:levels.length,review.preservationTest?'preserved level links':'existing level links'],[review.preservationTest?review.expectedCounts.assessments:levels.filter(l=>l.assessment).length,review.preservationTest?'preserved assessments':'assessments'],[0,'new level copies']]){const item=el('div','',summary);el('strong',value,item);el('span',label,item);}
+  if(review.preservationTest)el('p','Preservation test: save this lesson unchanged. Zero additions, removals, or text edits. All '+review.expectedCounts.levels+' existing levels and '+review.expectedCounts.assessments+' assessment flags must remain identical. Success requires native save acknowledgement and complete independent readback equality.',$('changes'));
   el('p','Destination title: '+review.baseline.name,$('changes'));
   el('p',review.transport==='native-editor'?'Save method: the native editor’s Save and Keep Editing control, followed by independent saved verification.':'Save method: direct API request (legacy review).',$('changes'));
   const table=el('table','',$('changes')),head=el('tr','',el('thead','',table));for(const text of ['Section','Level group','Existing level','Assessment'])el('th',text,head);
@@ -90,7 +92,7 @@ function render(){
  if(state.receipt){
   const r=state.receipt,p=el('p',state.cleanupReceipt?.attempted?'Historical transfer receipt. See cleanup below for the current saved result.':r.status==='saved-and-verified'?(native?'Saved and independently verified.':'Simulated save verified. No live lesson was changed.'):r.status,$('report'));if(r.status==='saved-and-verified')p.className='success';
   el('p','Save requests sent: '+(native?'at most one for this approved request':state.demo.sendCount+' simulated')+'. Automatic retries: none.',$('report'));
-  if(r.verification?.passed&&!state.cleanupReceipt?.attempted)el('p','All reviewed changes match. Unlisted content and settings are preserved. Restore point retained.',$('report'));
+  if(r.status==='saved-and-verified'&&!state.cleanupReceipt?.attempted)el('p','All reviewed changes match. Unlisted content and settings are preserved. Restore point retained.',$('report'));
   for(const message of saveDiagnostics(r).messages)el('p',message,$('report'));
   for(const message of r.verification?.mismatches||[])el('p',message,$('report'));
   if(state.automaticRecheck)el('p','Automatic readback-only recheck completed. No second save was sent.',$('report'));
@@ -163,6 +165,11 @@ $('read-baseline').onclick=()=>run(async()=>{
  io=await makeIO();await readTransferBaseline(io);delete state.preparationError;persist();downloadReport();
  status('Fresh baseline read. Report download requested; if it did not appear, use Download baseline report below. No staging or save was attempted. Level mappings and unit conflicts have not been checked.');
 },{baseline:true});
+$('prepare-preservation').onclick=()=>run(async()=>{
+ if(state.job||state.receipt||state.needsRecovery)throw Error('Start a fresh run for the preservation test.');
+ if(native){state.destination=selectDestination($('destination').value,$('practice').checked);state.practiceConfirmed=true;}else if(!state.demo)throw Error('Load an isolated demo first.');
+ io=await makeIO();state.job=await preparePreservationTest(io);state.needsRecovery=false;$('approve').checked=false;persist();status('Preservation review ready. No fields were changed. Review the unchanged lesson, then approve one native save.');
+});
 async function prepareReview(){
  const ownTab=native?await chrome.tabs.getCurrent():null;
  try{
