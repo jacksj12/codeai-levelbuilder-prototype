@@ -1,3 +1,13 @@
+# Reviewed objective-text publishing — 0.13.1
+
+This release implements one previously blocked case: replacing one uniquely identifiable objective description while preserving all native objective IDs, keys, level tags and unrelated metadata. Reordered unchanged objectives do not cause writes. Multiple unmatched descriptions, duplicates, additions and removals remain blocked instead of guessing which record or tags to change.
+
+Production comparison, native row-control staging, interrupted rehearsal recovery, save preparation, payload construction and independent saved verification share the existing guarded scalar path. Tests cover a single verified simulated save, repeat execution without resend, exact restoration, altered IDs/tags, ambiguous replacements and the actual serialized native bridge with native-shaped row controls. No live lesson was staged or saved for this change. Source evidence: Code.org staging ObjectivesEditor.jsx and ObjectiveLine.jsx in apps/src/levelbuilder/lesson-editor (read November 20, 2026); deployed live acceptance remains pending.
+
+Full suite: 260 passed, zero failures. The source companion must be reloaded to 0.13.1 before using this new path; the installed companion has not been reloaded by this change.
+
+The user's broader unsupported-publishing request is NOT complete. Remaining work: objective additions/removals and explicit multi-record mapping; shared-resource creation and vocabulary writes; populated progression replacement; reviewed deletions; assets; production destinations. Official AddResourceDialog.jsx and AddVocabularyDialog.jsx issue immediate POST/PATCH requests, so running them inside an unsaved rehearsal would violate its no-remote-write contract. They need a distinct durable reviewed-commit workflow, shared-record ownership/impact checks, and reconciliation of uncertain results before native staging. Do not remove their existing guards or present mock coverage as live acceptance. The protected saved lesson and four levels remain untouched.
+
 # Notion import and fresh live preservation verified — 0.13.0
 
 Current status, November 20, 2026 (fresh check at 2026-11-21 06:38 UTC). This entry supersedes pending setup statements in historical entries below.

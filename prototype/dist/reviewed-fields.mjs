@@ -4,6 +4,7 @@ const front={teacherOverview:'overview',studentOverview:'studentOverview',purpos
 // Existing fields only; collection creation and lesson renaming are separate.
 export function savedFieldPath(op){
  const p=op.path;if(op.kind!=='set')return null;
+ if(p.length===3&&p[0]==='frontMatter'&&p[1]==='objectives'&&Number.isInteger(p[2])&&p[2]>=0)return ['objectives',p[2],'description'];
  if(p.length===2&&p[0]==='frontMatter'&&Object.hasOwn(front,p[1]))return [front[p[1]]];
  if(p[0]!=='activities'||!Number.isInteger(p[1])||p[1]<0)return null;
  if(p.length===3&&['title','duration'].includes(p[2]))return ['activities',p[1],p[2]==='title'?'name':'duration'];
@@ -17,5 +18,5 @@ export function liveFieldPath(op){const saved=savedFieldPath(op);return saved?.l
 
 const calloutTypes={'Teaching Tip':'teachingTip','Content Corner':'contentCorner','Discussion Goal':'discussionGoal','Assessment Opportunity':'assessmentOpportunity','Ethics Opportunity':'ethicsOpportunity'};
 export function nativeFieldValue(op){return op.path.length===7&&op.path[6]==='type'?calloutTypes[op.after]:op.after;}
-export function protectedFieldPath(path){return path?.length===7&&path[4]==='tips'?['unmanagedActivities',...path.slice(1)]:null;}
+export function protectedFieldPath(path){if(path?.length===3&&path[0]==='objectives'&&path[2]==='description')return path;return path?.length===7&&path[4]==='tips'?['unmanagedActivities',...path.slice(1)]:null;}
 export function restoreFieldProtection(target,original,path){const p=protectedFieldPath(path);if(p)putField(target,p,fieldAt(original,p));}

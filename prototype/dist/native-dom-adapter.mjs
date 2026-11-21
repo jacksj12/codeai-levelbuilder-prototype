@@ -332,6 +332,20 @@ export async function nativeEditorBridge(request={action:'read'}){
  if(await fingerprint(current)!==request.expectedCaptureDigest)throw Error('Native editor changed before the action. Nothing was filled.');
  const op=request.operation,path=op?.path;
  if(op?.kind!=='set'||!Array.isArray(path)||path.some(k=>['__proto__','prototype','constructor'].includes(k)))throw Error('Only existing scalar fields are supported.');
+ if(path.length===3&&path[0]==='frontMatter'&&path[1]==='objectives'&&Number.isInteger(path[2])&&path[2]>=0){
+  const objective=current.live.objectives[path[2]];
+  if(!objective||objective.description!==op.before||typeof op.after!=='string'||!op.after.trim()||op.after.length>100000)throw Error('The objective differs from the reviewed replacement.');
+  const table=tableFor(['Description','Levels','Actions']),row=table.querySelectorAll('tbody tr')[path[2]];
+  if(!row||row.children[0]?.textContent.trim()!==op.before.trim())throw Error('The objective row does not match its captured record.');
+  if(!row.getClientRects().length){const buttons=[...document.querySelectorAll('#edit-container h2 button')].filter(b=>b.textContent.trim()==='Objectives');if(buttons.length!==1)throw Error('Objective panel is ambiguous.');buttons[0].click();}
+  const edits=row.querySelectorAll('.fa-pen-to-square');if(edits.length!==1)throw Error('Objective edit control is ambiguous.');
+  checkDeadline();edits[0].parentElement.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0,buttons:1}));await settle();
+  const inputs=row.querySelectorAll('td:first-child input[type="text"]'),save=row.querySelectorAll('.fa-check');
+  if(inputs.length!==1||save.length!==1||inputs[0].value!==op.before)throw Error('Objective edit did not open with the reviewed value.');
+  const node=inputs[0];checkDeadline();Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(node,op.after);node.dispatchEvent(new Event('input',{bubbles:true}));node.dispatchEvent(new Event('change',{bubbles:true}));await settle();
+  const immediate=read();if(stable(immediate.live)!==stable(current.live)||stable(immediate.saved)!==stable(current.saved))throw Error('Outside edits appeared during objective editing.');
+  checkDeadline();save[0].parentElement.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0,buttons:1}));await settle();return read();
+ }
  if(path.length===7&&path[0]==='activities'&&path[2]==='sections'&&path[4]==='callouts'&&[path[1],path[3],path[5]].every(n=>Number.isInteger(n)&&n>=0)&&['type','body'].includes(path[6])){
   const types={'Teaching Tip':'teachingTip','Content Corner':'contentCorner','Discussion Goal':'discussionGoal','Assessment Opportunity':'assessmentOpportunity','Ethics Opportunity':'ethicsOpportunity'};
   const tip=current.live.activities[path[1]]?.activitySections[path[3]]?.tips?.[path[5]],key=path[6]==='body'?'markdown':'type',before=key==='type'?types[op.before]:op.before,after=key==='type'?types[op.after]:op.after;
@@ -405,6 +419,7 @@ export function unsupportedNativeActions(plan){
  return plan.operations.filter(op=>{
   const p=op.path;if(op.kind!=='set')return true;
   if(p.length===1&&p[0]==='title')return false;
+  if(p.length===3&&p[0]==='frontMatter'&&p[1]==='objectives'&&Number.isInteger(p[2])&&p[2]>=0)return typeof op.after!=='string'||!op.after.trim()||op.after.length>100000;
   if(p.length===2&&p[0]==='frontMatter'&&TEXT_FIELDS.includes(p[1]))return false;
   if(p[0]==='activities'&&Number.isInteger(p[1])&&p[1]>=0){
    if(p.length===7&&p[2]==='sections'&&Number.isInteger(p[3])&&p[3]>=0&&p[4]==='callouts'&&Number.isInteger(p[5])&&p[5]>=0)return p[6]==='body'?typeof op.after!=='string'||op.after.length>100000:p[6]!=='type'||!['Teaching Tip','Content Corner','Discussion Goal','Assessment Opportunity','Ethics Opportunity'].includes(op.after);

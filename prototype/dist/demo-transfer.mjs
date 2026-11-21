@@ -45,7 +45,7 @@ export function demoAdapter(state,persist){
     const body=JSON.parse(request.review.request.body);
     if(canonical(JSON.parse(body.originalLessonData))!==canonical(state.server))throw Error('Demo saved baseline changed.');
     if(state.saveUnchanged){state.sendCount++;persist();return {outcome:'response-received',ok:true,httpStatus:200,simulated:true,responseSummary:{kind:'lesson-summary',lessonId:state.server.id,levelAssociations:state.server.activities.flatMap(a=>a.activitySections).reduce((n,s)=>n+s.scriptLevels.length,0)}};}
-    state.server.activities=JSON.parse(body.activities);
+    state.server.activities=JSON.parse(body.activities);state.server.objectives=JSON.parse(body.objectives);
     for(const key of ['name','overview','studentOverview','purpose','preparation','assessmentOpportunities'])state.server[key]=body[key];let id=10000,sectionId=20000,activityId=30000;
     for(const a of state.server.activities)if(a.id==null)a.id=++activityId;
     for(const a of state.server.activities)for(const s of a.activitySections)if(s.id==null)s.id=++sectionId;

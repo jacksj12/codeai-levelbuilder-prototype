@@ -108,7 +108,16 @@ export async function buildTransferPlan(pkg,snapshot,decisions={}){
  }
  async function scalarFields(path,source,label,keys){for(const key of keys)await propose([...path,key],source[key],label+' / '+key);}
  await propose(['title'],proposed.title,'Lesson title');
- await scalarFields(['frontMatter'],proposed.frontMatter,'Front matter',[...TEXT_FIELDS,'objectives','vocabulary']);
+ await scalarFields(['frontMatter'],proposed.frontMatter,'Front matter',[...TEXT_FIELDS,'vocabulary']);
+ const oldObjectives=working.frontMatter.objectives,newObjectives=proposed.frontMatter.objectives;
+ if(!objectivesEqual(oldObjectives,newObjectives)){
+  const removed=oldObjectives.map((description,index)=>({description,index})).filter(o=>!newObjectives.includes(o.description));
+  const added=newObjectives.filter(description=>!oldObjectives.includes(description));
+  // Only one uniquely identified text replacement can retain objective IDs and level tags without guessing.
+  if(oldObjectives.length===newObjectives.length&&new Set(oldObjectives).size===oldObjectives.length&&new Set(newObjectives).size===newObjectives.length&&removed.length===1&&added.length===1&&added[0].trim())
+   await propose(['frontMatter','objectives',removed[0].index],added[0],'Objective '+(removed[0].index+1)+' / description');
+  else await propose(['frontMatter','objectives'],newObjectives,'Front matter / objectives');
+ }
  for(const resource of proposed.resources){
   const mapped=snapshot.catalog.resources.filter(r=>resourceEqual(resource,r));
   if(mapped.length!==1)continue;

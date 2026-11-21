@@ -206,7 +206,13 @@ export function buildSavedLessonPayload(freshSaved,candidate,originalLessonJson)
  const standards=records(freshSaved.standards,'standards'),opportunity=records(freshSaved.opportunityStandards,'opportunity standards'),expressions=records(freshSaved.programmingExpressions,'code definitions');
  for(const item of [...standards,...opportunity])assert(typeof item.frameworkShortcode==='string'&&typeof item.shortcode==='string','A saved standard mapping is incomplete.');
  for(const item of expressions)assert(typeof item.programmingEnvironmentName==='string'&&typeof item.key==='string','A saved code-definition mapping is incomplete.');
- payload.objectives=JSON.stringify(records(freshSaved.objectives,'objectives'));
+ const objectives=records(candidate.objectives,'objectives'),originalObjectives=records(freshSaved.objectives,'objectives');
+ assert(objectives.length===originalObjectives.length,'Objective additions and removals need a separate collection review.');
+ for(const [index,objective]of objectives.entries()){
+  const original=originalObjectives[index];
+  assert(typeof objective.description==='string'&&canonical({...objective,description:original.description})===canonical(original),'Objective identity, tags or unreviewed metadata changed.');
+ }
+ payload.objectives=JSON.stringify(objectives);
  payload.activities=JSON.stringify(candidate.activities);
  payload.resources=JSON.stringify(keyList(freshSaved.resources,'resources'));
  payload.vocabularies=JSON.stringify(keyList(freshSaved.vocabularies,'vocabulary'));

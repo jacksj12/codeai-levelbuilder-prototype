@@ -1,6 +1,6 @@
-# Current implementation — release 0.13.0
+# Current implementation — release 0.13.1
 
-Notion OAuth and the supported practice-publishing handoff are implemented with **255 passing tests**. Live Notion sign-in, full brief import, and fresh visible-editor preservation checks passed. The final approved package matches the verified saved lesson: no additional save is required. See [NOTION-AND-PUBLISHING.md](NOTION-AND-PUBLISHING.md) for evidence and limits. Run `npm start` at `http://localhost:4316`. Earlier release notes below are historical.
+Notion OAuth and the supported practice-publishing handoff are implemented with **260 passing tests**. A single uniquely identifiable objective description can now be published while retaining its native ID and level tags; other collection changes remain blocked. Live Notion sign-in, full brief import, and fresh visible-editor preservation checks passed. The final approved package matches the verified saved lesson: no additional save is required. See [NOTION-AND-PUBLISHING.md](NOTION-AND-PUBLISHING.md) for evidence and limits. Run `npm start` at `http://localhost:4316`. Earlier release notes below are historical.
 
 # Historical validation — release 0.12.4
 

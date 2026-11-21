@@ -1,4 +1,4 @@
-# Notion sign-in and practice publishing — 0.13.0
+# Notion sign-in and practice publishing — 0.13.1
 
 ## Local startup
 
@@ -36,3 +36,9 @@ Live Notion sign-in and import succeeded with the read-only LevelBuilder AI Work
 The final approved draft preserves saved resource records and wording/formatting. Production preflight against the independently verified native receipt returned already-matches with zero changes/blockers and four retained levels. A fresh native editor page then confirmed exact equality of all 15 visible text areas, resource and objective content, callouts, four level names and three assessment flags. No new save occurred. This fresh visible-DOM check is not a full serialized companion receipt; the final no-change preflight was run with the production module locally, not completed as a new browser receipt flow. Private evidence remains outside Git.
 
 The current preservation/no-save verification is complete. A future changed publication still requires a fresh companion baseline and live receipt. Installed companion remains last verified at 0.12.3; source is 0.13.0. Reload to 0.13.0+ only when that changed publication is needed. Do not resend historical attempts or change the saved lesson to manufacture a publication test.
+
+## Objective descriptions in 0.13.1
+
+One uniquely identifiable objective text replacement can now be staged, restored, separately approved, saved and independently verified. Native record IDs and level tags are retained; changed IDs, tags or other metadata fail verification. Objective additions/removals and multiple unmatched descriptions still require a separate collection workflow. Five added tests cover the pipeline and serialized native row controls; full suite is 260 passing tests. No live write acceptance is claimed for this new feature.
+
+Upstream references: [ObjectivesEditor](https://github.com/code-dot-org/code-dot-org/blob/staging/apps/src/levelbuilder/lesson-editor/ObjectivesEditor.jsx), [ObjectiveLine](https://github.com/code-dot-org/code-dot-org/blob/staging/apps/src/levelbuilder/lesson-editor/ObjectiveLine.jsx), [AddResourceDialog](https://github.com/code-dot-org/code-dot-org/blob/staging/apps/src/levelbuilder/lesson-editor/AddResourceDialog.jsx), [AddVocabularyDialog](https://github.com/code-dot-org/code-dot-org/blob/staging/apps/src/levelbuilder/lesson-editor/AddVocabularyDialog.jsx). Resource/vocabulary writes are immediate shared-record mutations and cannot be treated as unsaved lesson rehearsal.
