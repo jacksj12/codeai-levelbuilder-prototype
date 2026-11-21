@@ -1,3 +1,4 @@
+import {sharedKind,sharedAppendValid,resourceRow,vocabularyRow} from './reviewed-shared.mjs';
 import {isObjectiveAppend,objectivePayload} from './reviewed-objectives.mjs';
 import {appendedActivities,appendedCallouts,inNewActivity,activityPayload,tipPayload,appendedSections,inAppendedSection,sectionPayload,stripNewSections,newSectionLink} from './reviewed-structure.mjs';
 import {savedFieldPath,liveFieldPath,fieldAt,putField,nativeFieldValue,restoreFieldProtection} from './reviewed-fields.mjs';
@@ -15,7 +16,7 @@ function replaceGroup(root,path,source){
  const section=sourceSection(root,path);assert(section,'A destination section is missing.');
  section.scriptLevels=clone(source.scriptLevels);section.progressionName=source.progressionName;
 }
-function comparableLesson(lesson){const value=clone(lesson);value.frontMatter.objectives.sort();return value;}
+function comparableLesson(lesson){const value=clone(lesson);value.frontMatter.objectives.sort();value.frontMatter.vocabulary.sort();value.resources=value.resources.map(resourceRow).sort((a,b)=>a.key.localeCompare(b.key));return value;}
 
 // Pure preparation only. No networking, CSRF access, Save click or writer.
 export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),originalLessonJson,transport='native-editor',preservationTest=false}={}){
@@ -33,7 +34,10 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
  if(preservationTest){assert(transport==='native-editor'&&plan.operations.length===0&&canonical(staged)===canonical(initial),'Preservation tests must keep the entire editor unchanged and use the native save control.');}else assert(plan.operations.length>0,'There are no reviewed changes to save.');
  const scopes=appendedSections(plan),sectionAdditions=[],candidate=clone(freshSaved),changes=[],fieldChanges=[];
  const activityIndices=appendedActivities(plan),activityAdditions=[],calloutAdditions=[],tipScopes=appendedCallouts(plan);
- const projection=stripNewSections(staged,scopes),objectiveAdditions=[];
+ const projection=stripNewSections(staged,scopes),objectiveAdditions=[],sharedAdditions=[];
+ for(const op of plan.operations.filter(sharedKind)){const kind=sharedKind(op);assert(sharedAppendValid(op),'The shared association differs from its verified record.');assert(!candidate[kind].some(r=>r.id===op.record.id||r.key===op.record.key),'A shared association is already present.');candidate[kind].push(clone(op.record));sharedAdditions.push({kind,record:clone(op.record),index:op.before.length});}
+ for(const addition of [...sharedAdditions].reverse()){const {kind,index,record}=addition;const expected=kind==='resources'?resourceRow(record):vocabularyRow(record);assert(projection.live[kind].length===index+1&&canonical(projection.live[kind][index])===canonical(expected),'The staged shared association does not match its reviewed record.');projection.live[kind].pop();projection.protection[kind].pop();}
+
  for(const op of plan.operations.filter(isObjectiveAppend)){const index=op.before.length,objective=objectivePayload(staged.live.objectives[index]);assert(candidate.objectives.length===index&&objective.description===op.after,'New objectives must append exactly as reviewed.');candidate.objectives.push(objective);objectiveAdditions.push({index,objective});}
  for(const addition of [...objectiveAdditions].reverse()){assert(projection.live.objectives.length===addition.index+1,'Unexpected objective ordering.');projection.live.objectives.pop();projection.protection.objectives.pop();}
 
@@ -49,7 +53,7 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
   sectionAdditions.push({activityIndex:ai,activityId:activity.id??null,newActivity:activityIndices.includes(ai),sectionIndex:si,label:'Activity '+(ai+1)+' / New section '+(si+1),section:clone(section)});
  }
  for(const op of plan.operations){
-  if(isObjectiveAppend(op)||inNewActivity(op,activityIndices)||inAppendedSection(op,scopes)||op.kind==='append'&&op.path.length===5&&op.path[4]==='callouts')continue;
+  if(sharedKind(op)||isObjectiveAppend(op)||inNewActivity(op,activityIndices)||inAppendedSection(op,scopes)||op.kind==='append'&&op.path.length===5&&op.path[4]==='callouts')continue;
   const p=op.path,nativePath=savedFieldPath(op);
   if(nativePath){
    const livePath=liveFieldPath(op),before=fieldAt(freshSaved,nativePath),after=nativeFieldValue(op);
@@ -84,7 +88,7 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
  const expectedCounts={activities:normalized.lesson.activities.length,sections:sections.length,callouts:sections.reduce((n,s)=>n+s.callouts.length,0),resources:normalized.lesson.resources.length,levels:levels.length,assessments:levels.filter(l=>l.assessment).length};
  const review={schemaVersion:1,kind:'native-save-review',status:'ready-for-review',createdAt:now,expiresAt:now+10*60*1000,
   destination:clone(plan.destination),transport,...(preservationTest?{preservationTest:true}:{}),remoteWrites:false,saveAllowed:false,requiresUserApproval:true,requiresRestaging:true,
-  baselineDigest:await digest(freshSaved),stagedDigest:await digest(staged),rehearsalPlanId:plan.id,changes,fieldChanges,sectionAdditions,activityAdditions,calloutAdditions,objectiveAdditions,
+  baselineDigest:await digest(freshSaved),stagedDigest:await digest(staged),rehearsalPlanId:plan.id,changes,fieldChanges,sectionAdditions,activityAdditions,calloutAdditions,objectiveAdditions,sharedAdditions,
   request:{method:'PUT',url:'https://levelbuilder-studio.code.org/lessons/'+plan.destination.id,contentType:'application/json;charset=UTF-8',body:JSON.stringify(payload)},
   baseline:clone(freshSaved),baselineNativeProtection:clone(initial.protection),expectedLesson:clone(plan.expectedLesson),expectedCounts,
   preserved:{activityIds:freshSaved.activities.map(a=>a.id),sectionIds:freshSaved.activities.flatMap(a=>a.activitySections.map(s=>s.id)),resourceKeys:JSON.parse(payload.resources),vocabularyKeys:JSON.parse(payload.vocabularies)},
@@ -115,6 +119,7 @@ export async function validateStagedSaveReview(review,capture){
  const normalized=normalizeNativeCapture(capture);assert(!normalized.blockers.length,normalized.blockers.join(' '));
  assert(canonical(comparableLesson(normalized.lesson))===canonical(comparableLesson(review.expectedLesson)),'The current staged editor differs from the approved result.');
  const protection=clone(capture.protection),requested=JSON.parse(JSON.parse(review.request.body).activities);
+ for(const addition of [...(review.sharedAdditions||[])].reverse()){const {kind,index,record}=addition;const expected=kind==='resources'?resourceRow(record):vocabularyRow(record);assert(protection[kind].length===index+1&&canonical(capture.live[kind][index])===canonical(expected),'A shared association differs from the reviewed record.');protection[kind].pop();}
  for(const addition of [...(review.objectiveAdditions||[])].reverse()){assert(protection.objectives.length===addition.index+1&&canonical(objectivePayload(capture.live.objectives[addition.index]))===canonical(addition.objective),'A staged new objective differs from its review.');protection.objectives.pop();}
  for(const change of review.fieldChanges||[])restoreFieldProtection(protection,review.baselineNativeProtection,change.path);
  for(const c of review.activityAdditions||[]){const a=capture.live.activities[c.activityIndex];assert(canonical(activityPayload(a,c.activityIndex+1))===canonical(c.activity),'A new activity differs from its review.');}
@@ -167,6 +172,11 @@ export async function verifySavedReadback(review,saved){
  if(addedObjectives.length!==expectedObjectives.length)mismatches.push('New saved objectives do not match the review.');
  for(const addition of expectedObjectives){const matches=addedObjectives.filter(o=>o.description===addition.objective.description);if(matches.length!==1){mismatches.push('A new objective is missing or duplicated.');continue;}const record=clone(matches[0]);if(!Number.isSafeInteger(record.id)||record.id<1)mismatches.push('A new objective has no valid saved identity.');delete record.id;if(Object.hasOwn(record,'key')){if(typeof record.key!=='string'||!record.key)mismatches.push('A new objective has an invalid saved key.');delete record.key;}if(canonical(record)!==canonical(addition.objective))mismatches.push('A new objective contains unreviewed tags or metadata.');}
 
+ for(const kind of ['resources','vocabularies']){
+  const wanted=[...review.baseline[kind],...(review.sharedAdditions||[]).filter(a=>a.kind===kind).map(a=>a.record)],actual=saved[kind];
+  if(actual.length!==wanted.length||new Set(actual.map(r=>r.id)).size!==actual.length||new Set(actual.map(r=>r.key)).size!==actual.length||wanted.some(record=>!actual.some(r=>canonical(r)===canonical(record))))mismatches.push('Saved '+kind+' identities, content or metadata differ from the exact review.');
+  else projection[kind]=clone(review.baseline[kind]);
+ }
  const sectionIds=new Set(review.baseline.activities.flatMap(a=>a.activitySections.map(s=>String(s.id))));
  for(const change of [...(review.sectionAdditions||[])].reverse()){
   const activity=projection.activities[change.activityIndex],section=activity?.activitySections[change.sectionIndex];
@@ -230,8 +240,9 @@ export function buildSavedLessonPayload(freshSaved,candidate,originalLessonJson)
  }
  payload.objectives=JSON.stringify(objectives);
  payload.activities=JSON.stringify(candidate.activities);
- payload.resources=JSON.stringify(keyList(freshSaved.resources,'resources'));
- payload.vocabularies=JSON.stringify(keyList(freshSaved.vocabularies,'vocabulary'));
+ for(const kind of ['resources','vocabularies']){assert(Array.isArray(candidate[kind])&&candidate[kind].length>=freshSaved[kind].length,'Shared-record removals need a separate review.');for(const [i,record]of freshSaved[kind].entries())assert(canonical(candidate[kind][i])===canonical(record),'An existing shared record changed.');}
+ payload.resources=JSON.stringify(keyList(candidate.resources,'resources'));
+ payload.vocabularies=JSON.stringify(keyList(candidate.vocabularies,'vocabulary'));
  payload.programmingExpressions=JSON.stringify(expressions);payload.standards=JSON.stringify(standards);payload.opportunityStandards=JSON.stringify(opportunity);
  payload.jitPlConceptIds=JSON.stringify(records(freshSaved.jitPlConcepts,'teaching concepts').map(c=>{assert(Number.isSafeInteger(c.id),'A saved teaching-concept identity is missing.');return c.id;}));
  assert(freshSaved.announcements===null||Array.isArray(freshSaved.announcements),'Saved announcements are incomplete.');payload.announcements=JSON.stringify(freshSaved.announcements);

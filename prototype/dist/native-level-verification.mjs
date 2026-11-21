@@ -1,3 +1,5 @@
+import {sharedKind,recoverSharedRehearsal,resourceRow} from './reviewed-shared.mjs';
+import {validateSharedRecord} from './shared-records.mjs';
 import {isObjectiveAppend,recoverObjectiveAdditions} from './reviewed-objectives.mjs';
 import {appendedActivities,appendedCallouts,inNewActivity,recoverExtraStructure,appendedSections,inAppendedSection,isSupportedSectionOperation,recoverAppendedSections} from './reviewed-structure.mjs';
 import {savedFieldPath,liveFieldPath,fieldAt,putField,restoreFieldProtection} from './reviewed-fields.mjs';
@@ -7,6 +9,7 @@ import {stageNativeTransferPlan,unsupportedNativeTransferActions} from './native
 
 export async function recoverNativeLevelCheck(bridge,previous){
  if(!previous?.initialCapture||!previous.plan)throw Error('The original level rehearsal checkpoint is missing.');
+ if(previous.plan.operations.some(sharedKind))return recoverSharedRehearsal(bridge,previous);
  if(previous.plan.operations.some(isObjectiveAppend))return recoverNativeLevelCheck(bridge,await recoverObjectiveAdditions(bridge,previous));
  if(appendedActivities(previous.plan).length||appendedCallouts(previous.plan).length)return recoverNativeLevelCheck(bridge,await recoverExtraStructure(bridge,previous));
  if(appendedSections(previous.plan).length)return recoverNativeLevelCheck(bridge,await recoverAppendedSections(bridge,previous));
@@ -92,14 +95,24 @@ export async function runAcceptedNativeRehearsal(bridge,pkg,{onProgress=()=>{},o
    if(lookup.kind!=='native-level-mappings'||canonical(lookup.capture)!==canonical(result.initialCapture))throw Error('Existing-level lookup did not preserve the original editor.');
    result.mappings.push(...lookup.mappings);onProgress('Verified '+result.mappings.length+' of '+names.length+' existing level mappings.');
   }
-  const snapshot=clone(original);
+  const snapshot=clone(original);snapshot.catalog.vocabularies=clone(result.initialCapture.saved.vocabularies||[]);
+  if(pkg.sharedRecords){
+   if(!Number.isSafeInteger(pkg.sharedRecords.courseVersionId)||pkg.sharedRecords.courseVersionId<1)throw Error('Shared-record scope is missing.');
+   for(const kind of ['resources','vocabularies']){if(!Array.isArray(pkg.sharedRecords[kind])||pkg.sharedRecords[kind].length>40)throw Error('Shared-record mappings are incomplete.');for(const record of pkg.sharedRecords[kind]){
+    validateSharedRecord(kind,record);const checked=await bridge({action:'lookup-shared-record',kind,record,courseVersionId:pkg.sharedRecords.courseVersionId,expectedCaptureDigest:await digest(result.initialCapture)});
+    if(checked.kind!=='native-shared-mapping'||canonical(checked.record)!==canonical(record)||canonical(checked.capture)!==canonical(result.initialCapture))throw Error('The shared-record lookup changed or did not preserve the editor.');
+    if(kind==='resources'){if(!snapshot.catalog.resources.some(r=>r.key===record.key))snapshot.catalog.resources.push({...resourceRow(record),markdownKey:record.markdownKey,destinationRecordId:record.id,verifiedSharedRecord:clone(record)});}
+    else if(!snapshot.catalog.vocabularies.some(r=>r.key===record.key))snapshot.catalog.vocabularies.push(clone(record));
+   }}
+  }
+
   for(const mapping of result.mappings)if(!snapshot.catalog.levels.some(l=>l.key===mapping.key))snapshot.catalog.levels.push(mapping);
   const first=await buildTransferPlan(pkg,snapshot),decisions={};
   for(const op of first.operations){if(op.path.length===1&&op.path[0]==='title')decisions[op.id]='keep';else if(savedFieldPath(op))decisions[op.id]='replace';}
   const plan=await buildTransferPlan(pkg,snapshot,decisions);result.plan=plan;
   result.blockers=[...plan.blockers,...plan.operations.filter(op=>op.requiresDecision).map(op=>op.label+': existing content differs and needs an explicit keep/replace decision.'),...unsupportedNativeTransferActions(plan).map(op=>op.label+': this change is not supported by native transfer.')];
   if(result.blockers.length)throw Error('Preparation blocked by unresolved items: '+result.blockers.join(' '));
-  if(plan.operations.some(op=>isObjectiveAppend(op)?false:inNewActivity(op,appendedActivities(plan))||op.kind==='append'&&op.path.length===5&&op.path[4]==='callouts'?false:inAppendedSection(op,appendedSections(plan))?!isSupportedSectionOperation(op,appendedSections(plan)):op.path.at(-1)!=='progression'&&!savedFieldPath(op)))throw Error('This rehearsal supports teaching fields, appended sections with callouts, and existing-section level links; callout additions on existing sections and other collections need separate review.');
+  if(plan.operations.some(op=>isObjectiveAppend(op)||sharedKind(op)?false:inNewActivity(op,appendedActivities(plan))||op.kind==='append'&&op.path.length===5&&op.path[4]==='callouts'?false:inAppendedSection(op,appendedSections(plan))?!isSupportedSectionOperation(op,appendedSections(plan)):op.path.at(-1)!=='progression'&&!savedFieldPath(op)))throw Error('This rehearsal supports teaching fields, appended sections with callouts, and existing-section level links; callout additions on existing sections and other collections need separate review.');
   await onCheckpoint(clone({...result,status:'running'}));
   onProgress('Rehearsing proposed teaching fields and level links without saving.');
   const partial=await stageNativeTransferPlan(plan,bridge,{maxOperations:1,onProgress:async report=>{await onCheckpoint(clone({...result,status:'running',reports:[...result.reports,report]}));}});result.reports.push(partial);

@@ -1,3 +1,4 @@
+import {resourceRow} from './reviewed-shared.mjs';
 import {objectiveReplacements} from './objective-mapping.mjs';
 import {SANDBOX,objectivesEqual} from './core.mjs';
 import {validDestination} from './destination.mjs';
@@ -44,7 +45,7 @@ export function validateDestination(snapshot){
 }
 export function packageProblems(pkg){
  const errors=[];
- if(!(pkg?.schemaVersion===1||[2,3].includes(pkg?.schemaVersion)&&pkg.publication?.schemaVersion===1)||!(pkg.sandbox===SANDBOX||/^https:\/\/levelbuilder-studio\.code\.org\/lessons\/[1-9]\d*\/edit$/.test(pkg.sandbox)))throw Error('Choose a review package for the assigned practice lesson.');
+ if(!(pkg?.schemaVersion===1||[2,3,4].includes(pkg?.schemaVersion)&&pkg.publication?.schemaVersion===1)||!(pkg.sandbox===SANDBOX||/^https:\/\/levelbuilder-studio\.code\.org\/lessons\/[1-9]\d*\/edit$/.test(pkg.sandbox)))throw Error('Choose a review package for the assigned practice lesson.');
  if(canonical(pkg).length>8_000_000)throw Error('This package exceeds the 8 MB transfer-review limit. Replace embedded assets with verified HTTPS links.');
  if(pkg.status!=='approved-locally')errors.push('Approve this draft locally before transfer.');
  if(!Array.isArray(pkg.conflicts))errors.push('The package is missing revision-conflict information.');
@@ -94,10 +95,10 @@ export async function buildTransferPlan(pkg,snapshot,decisions={}){
    if(matches.length!==1)blockers.push('Levels / '+level.key+': a unique verified destination mapping is required.');
   }
  }
- async function propose(path,after,label,kind='set'){
+ async function propose(path,after,label,kind='set',record=null){
   const current=clone(readPath(working,path));
   if(kind==='set'&&(path.at(-1)==='objectives'?objectivesEqual(current,after):equal(current,after)))return;
-  const op={kind,path,before:current,after:clone(after),label};
+  const op={kind,path,before:current,after:clone(after),label,...(record?{record:clone(record)}:{})};
   op.id=await digest(op);
   const occupied=kind==='set'&&current!==''&&current!==null&&current!==false&&!(Array.isArray(current)&&!current.length);
   const decision=decisions[op.id];
@@ -109,7 +110,10 @@ export async function buildTransferPlan(pkg,snapshot,decisions={}){
  }
  async function scalarFields(path,source,label,keys){for(const key of keys)await propose([...path,key],source[key],label+' / '+key);}
  await propose(['title'],proposed.title,'Lesson title');
- await scalarFields(['frontMatter'],proposed.frontMatter,'Front matter',[...TEXT_FIELDS,'vocabulary']);
+ await scalarFields(['frontMatter'],proposed.frontMatter,'Front matter',TEXT_FIELDS);
+ if(snapshot.raw?.kind!=='native-dom-capture')await propose(['frontMatter','vocabulary'],proposed.frontMatter.vocabulary,'Front matter / vocabulary');
+ else for(const vocabulary of proposed.frontMatter.vocabulary){if(working.frontMatter.vocabulary.includes(vocabulary))continue;const matches=(snapshot.catalog.vocabularies||[]).filter(r=>r.word+': '+r.definition===vocabulary);if(matches.length!==1){blockers.push('Vocabulary / '+vocabulary+': a unique verified shared record is required.');continue;}await propose(['frontMatter','vocabulary'],vocabulary,'Associate vocabulary / '+matches[0].word,'append',matches[0]);}
+ for(const vocabulary of before.frontMatter.vocabulary)if(!proposed.frontMatter.vocabulary.includes(vocabulary))preserved.push({label:'Vocabulary / '+vocabulary,reason:'Destination-only association retained'});
  const oldObjectives=working.frontMatter.objectives,newObjectives=proposed.frontMatter.objectives;
  if(pkg.objectiveMapping){
   try{for(const replacement of objectiveReplacements(pkg.objectiveMapping,snapshot.destination,snapshot.raw?.live?.objectives,newObjectives))await propose(['frontMatter','objectives',replacement.index],replacement.description,'Objective '+(replacement.index+1)+' / description');}
@@ -126,7 +130,7 @@ export async function buildTransferPlan(pkg,snapshot,decisions={}){
  for(const resource of proposed.resources){
   const mapped=snapshot.catalog.resources.filter(r=>resourceEqual(resource,r));
   if(mapped.length!==1)continue;
-  if(!working.resources.some(r=>resourceEqual(resource,r)))await propose(['resources'],clone(mapped[0]),'Associate resource / '+resource.name,'append');
+  if(!working.resources.some(r=>resourceEqual(resource,r))){if(!mapped[0].verifiedSharedRecord&&snapshot.raw?.kind==='native-dom-capture'){blockers.push('Resource / '+resource.name+': verify the shared record before association.');continue;}if(snapshot.raw?.saved?.resources.some(r=>r.isRollup)){blockers.push('Resource additions beside generated rollups require an ordering review.');continue;}await propose(['resources'],{...resourceRow(mapped[0]),destinationRecordId:null},'Associate resource / '+resource.name,'append',mapped[0].verifiedSharedRecord);}
  }
  for(const resource of before.resources)if(!proposed.resources.some(r=>resourceEqual(r,resource)))preserved.push({label:'Resource / '+resource.name,reason:'Destination-only association retained'});
  for(let ai=0;ai<proposed.activities.length;ai++){

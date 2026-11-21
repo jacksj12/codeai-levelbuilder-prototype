@@ -1,3 +1,11 @@
+# Current implementation — 0.15.0 checkpoint
+
+**287 tests pass; the full publishing build remains unfinished.** Shared resources and vocabulary now have separate create-or-reuse review, durable create-once evidence, read-only rechecks, schema-4 package binding and a separately approved lesson association save. Rehearsal restoration uses guarded reload rather than the native vocabulary Delete action, which deletes shared records globally.
+
+New shared-record paths have simulated pipeline, serialized API-bridge and reload tests. Dedicated shared-button controller tests, serialized native search/association controls, rendered review and live acceptance are still pending. Installed companion was last verified at 0.12.3; source is 0.15.0. No protected lesson or saved level was changed.
+
+Remaining work: shared-record editing/deletion, saved-content removals, replacement/reordering of saved level links, assets and production destinations. See [the current handoff](../NEXT-SESSION-HANDOFF.md) for exact next steps, preservation constraints and prior successful Notion/live verification evidence. Earlier notes below are historical.
+
 # Current implementation — release 0.14.0
 
 **274 tests pass.** Publishing now supports new objectives, explicit one-to-one mappings for multiple revised objective descriptions, progression title/assessment edits without replacing existing level associations, and editing a chosen callout in a section with multiple callouts. Objective readback follows saved IDs across the server's alphabetical sorting. Existing identities, tags and unreviewed fields are checked throughout rehearsal, recovery and saved verification.

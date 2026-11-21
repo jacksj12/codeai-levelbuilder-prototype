@@ -1,3 +1,4 @@
+import {sharedKind,sharedAppendValid} from './reviewed-shared.mjs';
 import {isObjectiveAppend} from './reviewed-objectives.mjs';
 import {savedFieldPath,restoreFieldProtection} from './reviewed-fields.mjs';
 import {clone,canonical,digest,validatePlan,applyOperation} from './transfer-core.mjs';
@@ -9,6 +10,7 @@ const calloutTypes=['Teaching Tip','Content Corner','Discussion Goal','Assessmen
 export function unsupportedNativeTransferActions(plan){
  return plan.operations.filter(op=>{
   if(!unsupportedNativeActions({operations:[op]}).length)return false;
+  if(sharedKind(op))return !sharedAppendValid(op);
   if(isObjectiveAppend(op))return !Array.isArray(op.before)||typeof op.after!=='string'||!op.after.trim()||op.after.length>100000;
   const p=op.path;
   if(op.kind==='append'&&p.length===1&&p[0]==='activities')return canonical(op.after)!==canonical({title:'',duration:null,sections:[emptySection]});
@@ -31,7 +33,8 @@ function preserved(before,after,op){
  const protection=clone(after.nativeProtection),p=op.path;restoreFieldProtection(protection,before.nativeProtection,savedFieldPath(op));
  if(op.kind==='append'){
   const activity=protection.unmanagedActivities[p[1]];
-  if(isObjectiveAppend(op))protection.objectives.pop();
+  if(sharedKind(op))protection[sharedKind(op)].pop();
+  else if(isObjectiveAppend(op))protection.objectives.pop();
   else if(p.length===1)protection.unmanagedActivities.pop();
   else if(p.length===3)activity.activitySections.pop();
   else activity.activitySections[p[3]].tips.pop();
@@ -68,7 +71,7 @@ export async function stageNativeTransferPlan(plan,bridge,{journal=null,maxOpera
   const fresh=await bridge({action:'read'});
   if(canonical(fresh)!==canonical(capture)){result.status='blocked';result.reason='Outside changes detected. No further actions were taken.';break;}
   applyOperation(expected,op);
-  const action=isObjectiveAppend(op)?'append-objective':op.kind==='set'?(op.path.at(-1)==='progression'?'append-progression':'set-scalar'):op.path.length===1?'append-activity':op.path.length===3?'append-section':'append-callout';
+  const action=sharedKind(op)?'append-shared-association':isObjectiveAppend(op)?'append-objective':op.kind==='set'?(op.path.at(-1)==='progression'?'append-progression':'set-scalar'):op.path.length===1?'append-activity':op.path.length===3?'append-section':'append-callout';
   let nextCapture;
   try{
    nextCapture=await bridge({action,mode:action==='append-progression'?'unsaved-level-staging':op.kind==='set'?'unsaved-scalar-staging':'unsaved-structure-staging',operation:op,expectedCaptureDigest:await digest(capture)});

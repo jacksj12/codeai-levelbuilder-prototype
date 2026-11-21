@@ -1,3 +1,5 @@
+import {resourceRow} from './reviewed-shared.mjs';
+import {validateSharedRecord} from './shared-records.mjs';
 import {clone,canonical,digest,packageProblems,buildTransferPlan,validatePlan} from './transfer-core.mjs';
 import {savedReport} from './destination-revisions.mjs';
 import {normalizeNativeCapture} from './transfer-native.mjs';
@@ -16,12 +18,14 @@ export async function preparePublication(pkg,report,{objectiveTargets}={}){
  if(objectiveTargets)base.objectiveMapping={schemaVersion:1,destinationId:destination.id,baseline:clone(saved.objectives),targets:clone(objectiveTargets)};
  const objectiveChoices={saved:saved.objectives.map(o=>({id:o.id,description:o.description,tagCount:o.scriptLevelIds?.length||0})),proposed:clone(base.lesson.frontMatter.objectives)};
  const snapshot=normalizeNativeCapture({kind:'native-dom-capture',destination,saved,blockers:[],live:{fields:{title:saved.name,teacherOverview:saved.overview??'',studentOverview:saved.studentOverview??'',purpose:saved.purpose??'',preparation:saved.preparation??'',assessmentOpportunities:saved.assessmentOpportunities??''},activities:saved.activities,objectives:saved.objectives,resources:saved.resources,vocabularies:saved.vocabularies}});
+ snapshot.catalog.vocabularies=clone(saved.vocabularies);
+ if(base.sharedRecords){for(const kind of ['resources','vocabularies'])for(const record of base.sharedRecords[kind]||[]){validateSharedRecord(kind,record);if(kind==='resources'){if(!snapshot.catalog.resources.some(r=>r.key===record.key))snapshot.catalog.resources.push({...resourceRow(record),markdownKey:record.markdownKey,destinationRecordId:record.id,verifiedSharedRecord:clone(record)});}else if(!snapshot.catalog.vocabularies.some(r=>r.key===record.key))snapshot.catalog.vocabularies.push(clone(record));}}
  const first=await buildTransferPlan(base,snapshot),decisions={};
  for(const operation of first.operations){if(operation.path.length===1&&operation.path[0]==='title')decisions[operation.id]='keep';else if(savedFieldPath(operation))decisions[operation.id]='replace';}
  const plan=await buildTransferPlan(base,snapshot,decisions),unsupported=unsupportedNativeTransferActions(plan);
  const checks=plan.blockers.filter(message=>message.startsWith('Levels / '));
  const blockers=[...plan.blockers.filter(message=>!checks.includes(message)),...unsupported.map(operation=>operation.label+': not supported by the native companion.'),...plan.operations.filter(operation=>operation.requiresDecision).map(operation=>operation.label+': an existing collection or progression needs a separate decision.')];
- base.schemaVersion=base.objectiveMapping?3:2;
+ base.schemaVersion=base.sharedRecords?4:base.objectiveMapping?3:2;
  const binding={schemaVersion:1,destination:clone(destination),baselineDigest:await digest(saved),packageDigest:await digest(base)};
  const handoff={...base,publication:binding};
  return {kind:'publication-preflight',objectiveChoices,destination,status:blockers.length?'blocked':!plan.operations.length&&!checks.length?'already-matches':'ready-for-companion-review',blockers:[...new Set(blockers)],checks,changes:plan.operations.map(({label,before,after})=>({label,before,after})),preserved:plan.preserved,existingLevels:saved.activities.flatMap(a=>a.activitySections).flatMap(s=>s.scriptLevels).length,handoff};

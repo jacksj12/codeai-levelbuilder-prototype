@@ -13,8 +13,8 @@ export function createDemo(source,{teaching=false,structure=false,complete=false
  const fields={title:saved.name,teacherOverview:saved.overview,studentOverview:saved.studentOverview,purpose:saved.purpose,preparation:saved.preparation,assessmentOpportunities:saved.assessmentOpportunities};
  const unmanaged=clone(saved.activities);for(const a of unmanaged){delete a.name;delete a.duration;for(const s of a.activitySections)for(const k of ['name','description','duration','remarks'])delete s[k];}
  const capture={schemaVersion:1,kind:'native-dom-capture',readerVersion:'native-scalars-v1',destination,saved:clone(saved),blockers:[],remoteWrites:false,
- live:{fields,activities:clone(saved.activities),objectives:clone(saved.objectives),resources:lesson.resources,vocabularies:clone(saved.vocabularies)},
- protection:{bootstrap:clone(saved),unmanagedActivities:unmanaged,objectives:clone(saved.objectives),resources:lesson.resources,vocabularies:clone(saved.vocabularies),controls:[],otherTables:[]}};
+ live:{fields,activities:clone(saved.activities),objectives:clone(saved.objectives),resources:clone(lesson.resources),vocabularies:clone(saved.vocabularies)},
+ protection:{bootstrap:clone(saved),unmanagedActivities:unmanaged,objectives:clone(saved.objectives),resources:clone(lesson.resources),vocabularies:clone(saved.vocabularies),controls:[],otherTables:[]}};
  if(teaching){
   lesson.frontMatter.preparation='Prepare two contrasting examples and a place for students to record evidence.';
   lesson.activities[0].title='Investigate model decisions';lesson.activities[0].duration=12;
@@ -36,6 +36,8 @@ export function demoAdapter(state,persist){
   bridge:async request=>{
    if(request.action==='read')return clone(state.editor);
    if(await digest(state.editor)!==request.expectedCaptureDigest)throw Error('Demo editor changed outside this run.');
+   if(request.action==='lookup-shared-record'){const record=(state.sharedRecords?.[request.kind]||[]).find(r=>canonical(r)===canonical(request.record));if(!record)throw Error('Shared record changed.');return {kind:'native-shared-mapping',record:clone(record),capture:clone(state.editor)};}
+   if(request.action==='reload-reviewed-editor'){if(canonical(state.server)!==canonical(request.initialCapture.saved))throw Error('Saved baseline changed.');state.editor=clone(request.initialCapture);persist();return clone(state.editor);}
    if(request.action==='lookup-levels')return {kind:'native-level-mappings',capture:clone(state.editor),mappings:state.mappings.filter(m=>request.names.includes(m.key))};
    if(request.action==='save-approved-cleanup'){
     if(request.approval?.approved!==true)throw Error('Cleanup approval required.');
@@ -46,6 +48,7 @@ export function demoAdapter(state,persist){
     if(canonical(JSON.parse(body.originalLessonData))!==canonical(state.server))throw Error('Demo saved baseline changed.');
     if(state.saveUnchanged){state.sendCount++;persist();return {outcome:'response-received',ok:true,httpStatus:200,simulated:true,responseSummary:{kind:'lesson-summary',lessonId:state.server.id,levelAssociations:state.server.activities.flatMap(a=>a.activitySections).reduce((n,s)=>n+s.scriptLevels.length,0)}};}
     state.server.activities=JSON.parse(body.activities);state.server.objectives=JSON.parse(body.objectives);
+    for(const kind of ['resources','vocabularies']){const catalog=[...state.server[kind],...(state.sharedRecords?.[kind]||[])];state.server[kind]=JSON.parse(body[kind]).map(key=>clone(catalog.find(r=>r.key===key)));}
     for(const key of ['name','overview','studentOverview','purpose','preparation','assessmentOpportunities'])state.server[key]=body[key];let id=10000,sectionId=20000,activityId=30000;
     for(const a of state.server.activities)if(a.id==null)a.id=++activityId;
     for(const a of state.server.activities)for(const s of a.activitySections)if(s.id==null)s.id=++sectionId;
@@ -54,6 +57,7 @@ export function demoAdapter(state,persist){
     state.sendCount++;persist();return {outcome:'response-received',ok:true,httpStatus:200,simulated:true};
    }
    const op=request.operation,ai=op.path[1],si=op.path[3];
+   if(request.action==='append-shared-association'){const kind=op.path[0]==='resources'?'resources':'vocabularies',r=op.record,row=kind==='resources'?{key:r.key,name:r.name,type:r.type,audience:r.audience,url:r.url}:{word:r.word,definition:r.definition};state.editor.live[kind].push(row);state.editor.protection[kind].push(clone(row));persist();return clone(state.editor);}
    if(request.action==='append-objective'){const record={key:'objective-'+(state.editor.live.objectives.length+1),description:op.after,scriptLevelIds:[]};state.editor.live.objectives.push(record);state.editor.protection.objectives.push(clone(record));persist();return clone(state.editor);}
    if(request.action==='remove-created-objective'){if(op.index!==state.editor.live.objectives.length-1||canonical(state.editor.live.objectives[op.index])!==canonical(op.expected)||op.expected.id!=null)throw Error('Unowned objective.');state.editor.live.objectives.pop();state.editor.protection.objectives.pop();persist();return clone(state.editor);}
    if(request.action==='set-scalar'){const value=nativeFieldValue(op);putField(state.editor.live,liveFieldPath(op),value);const p=protectedFieldPath(savedFieldPath(op));if(p)putField(state.editor.protection,p,value);persist();return clone(state.editor);}

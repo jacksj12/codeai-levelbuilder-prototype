@@ -1,3 +1,4 @@
+import {prepareSharedReview,executeSharedReview,bindSharedRecords} from './shared-records.mjs';
 import {saveDiagnostics} from './save-diagnostics.mjs';
 import {reviewedLevelGroups} from './reviewed-structure.mjs';
 import {prepareCleanup,approveCleanup,executeCleanup} from './test-link-cleanup.mjs';
@@ -53,7 +54,7 @@ function render(){
  $('save').disabled=busy||!$('approve').checked||!state.job;
  $('check').hidden=!state.receipt?.attempted||!!state.cleanupReceipt?.attempted;$('check').disabled=busy;
  $('recover').hidden=!state.needsRecovery||!!state.receipt?.attempted;$('recover').disabled=busy;
- $('download').disabled=!state.job&&!state.checkpoint&&!state.preparationError;
+ $('download').disabled=!state.job&&!state.checkpoint&&!state.preparationError&&!state.sharedReview;
  $('new-demo').disabled=busy;
  for(const id of ['load-failure-demo','load-demo','load-teaching-demo','load-structure-demo','package-file','destination','practice'])$(id).disabled=busy||native&&!!state.job||!!state.needsRecovery;
  $('changes').replaceChildren();
@@ -65,6 +66,7 @@ function render(){
   el('p',review.transport==='native-editor'?'Save method: the native editor’s Save and Keep Editing control, followed by independent saved verification.':'Save method: direct API request (legacy review).',$('changes'));
   const table=el('table','',$('changes')),head=el('tr','',el('thead','',table));for(const text of ['Section','Level group','Existing level','Assessment'])el('th',text,head);
   const body=el('tbody','',table);for(const c of reviewedLevelGroups(review))for(const l of c.addLevels){const row=el('tr','',body);el('td',c.section||c.activity,row);el('td',c.progression||'(untitled)',row);el('td',l.name,row);el('td',l.assessment?'Yes':'No',row);}
+  if(review.sharedAdditions?.length){el('h3','Resource and vocabulary associations',$('changes'));for(const change of review.sharedAdditions)el('p','Associate '+(change.kind==='resources'?change.record.name:change.record.word)+' · existing record '+change.record.id,$('changes'));el('p','Existing associations and shared metadata are retained. No shared record is edited or deleted.',$('changes'));}
   if(review.objectiveAdditions?.length){el('h3','New objectives',$('changes'));for(const c of review.objectiveAdditions){el('p','Add objective: '+c.objective.description,$('changes'));}el('p','Existing objective identities and level tags are retained. New objectives have no level tags.',$('changes'));}
   if(review.activityAdditions?.length){el('h3','New activities',$('changes'));for(const c of review.activityAdditions){const d=el('details','',$('changes'));el('summary',c.label+': '+c.activity.name,d);el('p','Before: no activity. After: '+c.activity.name+' · '+(c.activity.duration??'Untimed')+' minutes. Sections are listed below.',d);}}
   if(review.calloutAdditions?.length){el('h3','New callouts on existing sections',$('changes'));for(const c of review.calloutAdditions){const d=el('details','',$('changes'));el('summary',c.label,d);el('p','Before: no callout at this appended position.',d);el('p','Type: '+c.tip.type,d);el('pre',c.tip.markdown,d);}}
@@ -106,6 +108,7 @@ function render(){
  progress(state.receipt?4:state.job?3:state.pkg?2:1);
  updateReviewWindow();
  renderCleanup();
+ renderShared();
  if(evidenceError){
   for(const control of document.querySelectorAll('button,input'))control.disabled=true;
   $('download').disabled=false;
@@ -114,6 +117,42 @@ function render(){
   $('status').setAttribute('role','alert');
  }
 }
+function sharedLocked(){return busy||!!state.job||!!state.receipt||!!state.needsRecovery;}
+function renderShared(){
+ $('shared-panel').hidden=!native||!state.pkg;
+ const locked=sharedLocked(),review=state.sharedReview,expired=review&&Date.now()>review.expiresAt;
+ $('prepare-shared').disabled=locked;
+ $('shared-actions').hidden=!review;
+ $('approve-shared').disabled=locked||!review||expired||!!state.sharedApproval;
+ $('create-shared').disabled=locked||!review||expired||!!state.sharedApproval||!$('approve-shared').checked;
+ $('check-shared').disabled=locked||!review||!state.sharedApproval;
+ $('continue-shared').disabled=locked||state.sharedReceipt?.status!=='shared-records-verified';
+ const list=$('shared-review');list.replaceChildren();
+ if(review){el('p','Course version '+review.courseVersionId+' · '+review.destination.url,list);el('p',expired?'Review expired. Check shared records again before creating anything.':'Creation approval expires at '+new Date(review.expiresAt).toLocaleTimeString()+'.',list);
+ for(const item of review.items){const d=el('details','',list);el('summary',(item.action==='reuse'?'Reuse: ':'Create: ')+(item.kind==='resources'?item.intent.name:item.intent.word),d);if(item.kind==='resources'){for(const field of ['type','audience','url'])el('p',field+': '+item.intent[field],d);if(item.action==='create')el('p','Shown in resource dropdowns; no download URL, PDF inclusion, assessment flag or curriculum category.',d);}else el('p',item.intent.definition,d);if(item.record)el('p','Existing record '+item.record.id+' · all shared settings retained.',d);}
+ }
+ $('shared-status').textContent=state.sharedReceipt?(state.sharedReceipt.status==='shared-records-verified'?'Every shared record is verified. Continue to the separate lesson review; the lesson has not been saved.':'Creation is not confirmed. Recheck reads only; it cannot create or resend records.'):state.sharedApproval?'An approved creation run is retained. Recheck records before continuing.':'No shared-record creation attempted.';
+}
+async function sharedIO(){
+ io=await makeIO();if(!io.sharedBridge)throw Error('Shared-record creation is available only in the native companion.');
+ return {context:()=>io.sharedBridge({action:'context'}),search:(kind,intent,context)=>io.sharedBridge({action:'search',kind,query:kind==='resources'?intent.name:intent.word,courseVersionId:context.courseVersionId}),
+ create:(review,item,approval)=>io.sharedBridge({action:'create',mode:'explicit-approved-shared-create',review,item,approval}),
+ load:async digest=>readTransferRecord(localStorage,'native-shared-record-'+digest),persist:async(digest,value)=>{persistRecord('native-shared-record-'+digest,value);state.sharedProgress=value;persist();},onProgress:result=>status(result.status==='record-verified'?'Shared record verified. The lesson remains unchanged.':'Creation is uncertain. No repeat request will be sent.')};
+}
+$('prepare-shared').onclick=()=>run(async()=>{
+ if(!native||!state.pkg||state.job||state.receipt||state.needsRecovery)throw Error('Load a package in a fresh, restored practice run first.');
+ state.destination=selectDestination($('destination').value,$('practice').checked);state.practiceConfirmed=true;persist();const shared=await sharedIO();await readTransferBaseline(io);
+ state.sharedReview=await prepareSharedReview(state.pkg,shared);delete state.sharedReceipt;delete state.sharedApproval;$('approve-shared').checked=false;persist();
+ if(state.sharedReview.items.every(i=>i.action==='reuse')){state.sharedApproval={reviewId:state.sharedReview.id,approved:true};persist();state.sharedReceipt=await executeSharedReview(state.sharedReview,state.sharedApproval,shared,{readOnly:true});persist();}
+ status('Shared records checked. Review each item before creating missing records. The lesson has not been saved.');
+});
+$('approve-shared').onchange=renderShared;
+$('create-shared').onclick=()=>run(async()=>{
+ if(!native||state.job||state.receipt||state.needsRecovery||state.sharedApproval||!$('approve-shared').checked)throw Error('Review and approve shared-record creation first.');
+ const shared=await sharedIO();await readTransferBaseline(io);state.sharedApproval={reviewId:state.sharedReview?.id,approved:true};persist();state.sharedReceipt=await executeSharedReview(state.sharedReview,state.sharedApproval,shared);persist();downloadReport();status('Shared-record result retained. The lesson still requires its separate review and save.');
+});
+$('check-shared').onclick=()=>run(async()=>{if(!native||state.job||state.receipt||state.needsRecovery||!state.sharedApproval)throw Error('No shared-record run is available for recheck.');state.sharedReceipt=await executeSharedReview(state.sharedReview,state.sharedApproval,await sharedIO(),{readOnly:true});persist();status('Shared records rechecked. No creation or lesson-save request was sent.');});
+$('continue-shared').onclick=()=>run(async()=>{if(!native||state.job||state.receipt||state.needsRecovery)throw Error('Start a fresh restored review first.');state.pkg=await bindSharedRecords(state.pkg,state.sharedReceipt);persist();await prepareReview();});
 async function makeIO(){
  let adapter;
  if(native){
@@ -123,9 +162,11 @@ async function makeIO(){
    const tab=await chrome.tabs.get(tabId);if(tab.url!==destination.url||tab.discarded)throw Error('The selected editor moved or was discarded. Reopen and review it again.');
    const [result]=await chrome.scripting.executeScript({target:{tabId},injectImmediately:true,func,args:[encoded]});return result?.result;
   });
-  const edit=transport(nativeEditorBridge),read=transport(readAssignedLesson),usage=transport(readAssignedLevelUsage);
+  const {withReviewedReload}=await import('../browser-fill/reviewed-reload.mjs');
+  const {sharedRecordBridge}=await import('./shared-record-bridge.mjs'),shared=transport(sharedRecordBridge);
+  const rawEdit=transport(nativeEditorBridge),edit=withReviewedReload(request=>rawEdit(bound(request)),{tabs:chrome.tabs,tabId,destination}),read=transport(readAssignedLesson),usage=transport(readAssignedLevelUsage);
   const bound=request=>({...request,destination,practiceConfirmed:state.practiceConfirmed===true});
-  adapter={bridge:request=>edit(bound(request)),readSaved:()=>read(bound({action:'read',returnRaw:true})),checkUsage:async review=>{
+  adapter={sharedBridge:request=>shared(bound(request)),bridge:request=>edit(bound(request)),readSaved:()=>read(bound({action:'read',returnRaw:true})),checkUsage:async review=>{
    const usages=[];for(const level of reviewedLevelGroups(review).flatMap(c=>c.addLevels))usages.push(await usage(bound({action:'read',levelId:level.levelId,name:level.name})));return findUnitLevelConflicts(review,usages);
   }};
  }else adapter=demoAdapter(state.demo,persist);
@@ -158,7 +199,7 @@ $('new-demo').onclick=()=>{const next=new URL(location.href);next.searchParams.d
 $('package-file').onchange=()=>run(async()=>{
  const file=$('package-file').files[0];if(!file)return;if(file.size>8_000_000)throw Error('Choose a review package smaller than 8 MB.');
  const pkg=JSON.parse(await file.text());const {packageProblems}=await import('./transfer-core.mjs');const problems=packageProblems(pkg);if(problems.length)throw Error(problems.join(' '));
- state.pkg=pkg;delete state.job;$('package-name').textContent=file.name;persist();if($('practice').checked)await prepareReview();else status('Package loaded. Confirm your practice destination to automatically prepare the review.');
+ state.pkg=pkg;delete state.job;delete state.sharedReview;delete state.sharedReceipt;delete state.sharedApproval;$('approve-shared').checked=false;$('package-name').textContent=file.name;persist();if($('practice').checked)await prepareReview();else status('Package loaded. Confirm your practice destination to automatically prepare the review.');
 });
 $('read-baseline').onclick=()=>run(async()=>{
  if(!native||state.job||state.receipt||state.needsRecovery)throw Error('Start a fresh native transfer run before reading a baseline.');
@@ -247,4 +288,4 @@ if(startupError){status(startupError);$('status').setAttribute('role','alert');f
 if(native){if(startupError)$('baseline-status').textContent=startupError;else if(!state.job&&!state.receipt&&!state.needsRecovery)$('baseline-status').textContent='Companion '+chrome.runtime.getManifest().version+' · '+(state.preparationError||'Confirm the practice lesson, then read its baseline. No package is needed.');}
 
 
-if(!startupError){setInterval(()=>{if(!evidenceError)updateReviewWindow();},15000);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!evidenceError)updateReviewWindow();});}
+if(!startupError){setInterval(()=>{if(!evidenceError){updateReviewWindow();renderShared();}},15000);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!evidenceError)updateReviewWindow();});}

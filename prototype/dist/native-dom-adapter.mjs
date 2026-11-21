@@ -25,6 +25,7 @@ export async function nativeEditorBridge(request={action:'read'}){
   const tables=[...document.querySelectorAll('#edit-container table')].filter(t=>{const actual=[...t.querySelectorAll('thead th')].map(c=>c.textContent.trim());return actual.length===headers.length&&actual.every((h,i)=>h===headers[i]);});
   if(tables.length!==1)throw Error('Cannot uniquely read the '+headers.join('/')+' table.');return tables[0];
  };
+ function sharedSearchRoot(table){let root=table.parentElement;while(root&&root.id!=='edit-container'){const tables=root.querySelectorAll('table'),inputs=root.querySelectorAll('.Select-input input');if(tables.length===1&&inputs.length===1)return root;if(tables.length>1)break;root=root.parentElement;}return null;}
  function read(){
   const bootstrap=document.querySelector('script[data-lesson]');if(!bootstrap)throw Error('Lesson identity evidence is missing.');
   const saved=JSON.parse(bootstrap.getAttribute('data-lesson'));if(saved.id!==destination.id)throw Error('The sandbox lesson identity does not match.');
@@ -53,6 +54,7 @@ export async function nativeEditorBridge(request={action:'read'}){
     if(inputs?.length!==2||checks?.length!==1||inputs[0].value!==(section.name??section.displayName??'')||inputs[1].value!==String(section.duration??'')||checks[0].checked!==Boolean(section.remarks)||area.value!==(section.description??section.text??''))blockers.push('A section field has uncommitted or ambiguous state.');
    });
   });
+  for(const headers of [['Key','Name','Type','Audience','URL','Actions'],['Word','Definition','Actions']]){try{const root=sharedSearchRoot(tableFor(headers));if(root)for(const input of root.querySelectorAll('.Select-input input'))managed.add(input);}catch{}}
   // Protect all unrelated entity properties, associations, current controls and tables.
   // Known scalar changes are represented in the normalized lesson instead.
   const unmanagedActivities=structuredClone(hidden.activities);
@@ -64,11 +66,16 @@ export async function nativeEditorBridge(request={action:'read'}){
   const otherTables=[...document.querySelectorAll('#edit-container table')].filter(table=>{if(!table.querySelector('thead')&&table.querySelector('.uitest-ProgressPill'))return false;if(table.querySelector('thead'))return true;let parent=table.parentElement;while(parent&&!parent.classList.contains('uitest-activity-card')){if([...parent.children].some(n=>n.classList.contains('uitest-level-token-name')))return false;parent=parent.parentElement;}return true;}).map(table=>({headers:[...table.querySelectorAll('thead th')].map(c=>c.textContent.trim()),rows:[...table.querySelectorAll('tbody tr')].map(row=>row.textContent.trim())})).filter(t=>!['Key|Name|Type|Audience|URL|Actions','Word|Definition|Actions','Description|Levels|Actions'].includes(t.headers.join('|')));
   return {schemaVersion:1,kind:'native-dom-capture',readerVersion:'native-scalars-v1',fixture:Boolean(fixture),destination:structuredClone(destination),saved,
    live:{fields,activities:hidden.activities,objectives:hidden.objectives,resources,vocabularies},
-   protection:{bootstrap:saved,unmanagedActivities,objectives:structuredClone(hidden.objectives),resources,vocabularies,controls,otherTables},blockers,remoteWrites:false};
+   protection:{bootstrap:saved,unmanagedActivities,objectives:structuredClone(hidden.objectives),resources:structuredClone(resources),vocabularies:structuredClone(vocabularies),controls,otherTables},blockers,remoteWrites:false};
  }
  const stable=value=>Array.isArray(value)?'['+value.map(stable).join(',')+']':value&&typeof value==='object'?'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}':JSON.stringify(value);
  const fingerprint=async value=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(stable(value))))].map(b=>b.toString(16).padStart(2,'0')).join('');
  if(request.action==='read')return read();
+ if(request.action==='authorize-reviewed-reload'){
+  if(request.mode!=='restore-reviewed-rehearsal'||request.initialCapture?.saved?.id!==destination.id)throw Error('Invalid rehearsal restore point.');const current=read();if(current.blockers.length||await fingerprint(current)!==request.expectedCaptureDigest||stable(current.saved)!==stable(request.initialCapture.saved))throw Error('Outside edits prevent editor restoration.');
+  const response=await fetch('/lessons/'+destination.id+'/edit',{credentials:'same-origin',redirect:'error',cache:'no-store'});if(!response.ok)throw Error('Saved baseline verification failed before restoration.');const doc=new DOMParser().parseFromString(await response.text(),'text/html'),saved=JSON.parse(doc.querySelector('script[data-lesson]')?.getAttribute('data-lesson')||'null');if(stable(saved)!==stable(request.initialCapture.saved))throw Error('The saved lesson changed. Preserve the editor instead of reloading.');checkDeadline();if(await fingerprint(read())!==request.expectedCaptureDigest)throw Error('Outside edits appeared during restoration checks.');return {kind:'reviewed-reload-authorization',captureDigest:request.expectedCaptureDigest,baselineDigest:await fingerprint(saved)};
+ }
+
  checkDeadline();
  if(request.action==='save-approved-review'||request.action==='save-approved-cleanup'){
   const cleanup=request.action==='save-approved-cleanup';
@@ -158,6 +165,24 @@ export async function nativeEditorBridge(request={action:'read'}){
    }
    return {kind:'native-save-result',attempted:true,httpStatus:response.status,ok:response.ok,outcome:response.ok?'response-received':'rejected',...(responseSummary?{responseSummary}:{}),...(errorMessage?{errorMessage}:{})};
   }catch(error){return {kind:'native-save-result',attempted:true,outcome:'unknown',error:String(error.message)};}
+ }
+ if(['lookup-shared-record','append-shared-association'].includes(request.action)){
+  const before=read();if(before.blockers.length||await fingerprint(before)!==request.expectedCaptureDigest)throw Error('The editor changed before shared-record lookup or association.');
+  const op=request.operation,kind=request.kind||(op?.path[0]==='resources'?'resources':'vocabularies'),record=request.record||op?.record;
+  if(!['resources','vocabularies'].includes(kind)||!record||!Number.isSafeInteger(record.id)||!record.key)throw Error('The shared-record identity is missing.');
+  const script=document.querySelector('script[data-lesson][data-unit-for-lesson]'),unit=JSON.parse(script?.getAttribute('data-unit-for-lesson')||'null');if(!Number.isSafeInteger(unit?.courseVersionId)||unit.courseVersionId<1||request.action==='lookup-shared-record'&&unit.courseVersionId!==request.courseVersionId)throw Error('The native course scope differs from the shared-record review.');
+  const query=kind==='resources'?record.name:record.word;if(typeof query!=='string'||query.trim().length<3||query.length>255)throw Error('Shared records require a searchable name.');
+  checkDeadline();const response=await fetch('/'+kind+'/search?'+new URLSearchParams({query,limit:'40',courseVersionId:String(unit.courseVersionId)}),{credentials:'same-origin',redirect:'error',cache:'no-store',headers:{'X-Requested-With':'XMLHttpRequest'}});if(!response.ok)throw Error('Shared-record verification failed.');const records=await response.json();if(!Array.isArray(records)||records.length>=40||records.filter(r=>stable(r)===stable(record)).length!==1)throw Error('The shared record changed or its search is incomplete.');
+  if(request.action==='lookup-shared-record'){const after=read();if(stable(after)!==stable(before))throw Error('The editor changed during shared-record lookup.');return {kind:'native-shared-mapping',record,capture:after};}
+  if(request.mode!=='unsaved-structure-staging'||op.kind!=='append'||!(kind==='resources'?stable(op.path)==='["resources"]':stable(op.path)==='["frontMatter","vocabulary"]'))throw Error('Only reviewed new associations are supported.');
+  const table=tableFor(kind==='resources'?['Key','Name','Type','Audience','URL','Actions']:['Word','Definition','Actions']),root=sharedSearchRoot(table),inputs=root?.querySelectorAll('.Select-input input');if(inputs?.length!==1)throw Error('The native shared-record search control is ambiguous.');
+  if(kind==='resources'?before.live.resources.some(r=>r.key===record.key):before.live.vocabularies.some(v=>v.word===record.word&&v.definition===record.definition))throw Error('This shared record is already associated.');
+  if(!inputs[0].getClientRects().length){const panel=kind==='resources'?'Resources':'Vocabulary',headings=[...document.querySelectorAll('#edit-container h2 button')].filter(b=>b.textContent.trim()===panel);if(headings.length!==1)throw Error('The shared-record panel is ambiguous.');headings[0].click();}
+  if(!inputs[0].getClientRects().length||inputs[0].disabled)throw Error('The shared-record search is unavailable.');
+  checkDeadline();inputs[0].focus();Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(inputs[0],query);inputs[0].dispatchEvent(new Event('input',{bubbles:true}));inputs[0].dispatchEvent(new Event('change',{bubbles:true}));
+  const label=kind==='resources'?record.name+' - '+record.url:record.word+' - '+record.definition;
+  const option=await new Promise((resolve,reject)=>{let observer,timer;const finish=(error,value)=>{observer?.disconnect();clearTimeout(timer);error?reject(error):resolve(value);};const inspect=()=>{try{checkDeadline();const options=[...root.querySelectorAll('.Select-option')].filter(n=>n.getClientRects().length&&n.textContent.trim()===label);if(options.length>1)finish(Error('More than one native search option matches this record.'));else if(options.length===1)finish(null,options[0]);}catch(error){finish(error);}};observer=new MutationObserver(inspect);observer.observe(root,{childList:true,subtree:true,attributes:true,characterData:true});timer=setTimeout(()=>finish(Error('The native shared-record search did not return the reviewed option.')),Math.max(1,Math.min(10000,(request.deadlineAt||Date.now()+10000)-Date.now())));inspect();});
+  if(stable(read())!==stable(before))throw Error('Outside edits appeared before adding the shared association.');checkDeadline();option.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0,buttons:1}));await settle();return read();
  }
  if(['lookup-levels','append-progression','clear-owned-progression'].includes(request.action)){
   const before=read();if(before.blockers.length)throw Error(before.blockers.join(' '));

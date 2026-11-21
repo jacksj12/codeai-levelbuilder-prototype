@@ -2,7 +2,7 @@ export function createNativeTransport(execute,{timeoutMs=15000}={}){
  if(!Number.isInteger(timeoutMs)||timeoutMs<1)throw Error('Invalid native timeout.');
  let paused=false;
  return async request=>{
-  if(paused&&request.action!=='read')throw Error('Native writes are paused after a timeout. Recompare the current editor before resuming.');
+  if(paused&&!['read','context','search'].includes(request.action))throw Error('Native writes are paused after a timeout. Recompare the current editor before resuming.');
   let timer;
   const encoded=JSON.stringify({...request,transportErrors:true,deadlineAt:Date.now()+Math.max(1,timeoutMs-1000)});
   try{

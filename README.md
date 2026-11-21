@@ -19,7 +19,7 @@ Run the engineering checks from `prototype`:
 node --test --test-isolation=none
 ```
 
-Latest delivery check: **212 passed, 0 failed**. These checks are not independent curriculum acceptance.
+Latest checkpoint: **0.15.0, 287 tests passed, 0 failed**. Shared-resource/vocabulary create-or-reuse review and guarded association publishing are implemented with automated coverage; live acceptance of the new path remains pending. The complete publishing build is still unfinished. See [the handoff](NEXT-SESSION-HANDOFF.md) for remaining scope. These checks are not independent curriculum acceptance.
 
 Release **0.12.0** adds combined source imports and a read-only signed-in Slides import control. File imports were checked against the real source deck and Notion brief. Installed-extension reload and live workflow acceptance remain blocked by browser access policy.
 

@@ -1,3 +1,33 @@
+# Shared-record publishing checkpoint — 0.15.0
+
+This is a tested implementation checkpoint, not completion of the full publishing build. The user requested commit, push, status and handoff before further implementation. No live lesson was staged, saved, reloaded or deleted during this work; preserve lesson 8898984 and levels 104255 / 104271 / 104272 / 104273.
+
+## Changes in this checkpoint
+
+- Added a separate native companion review for shared resources and vocabulary. It searches within the verified course version, reuses exact records, and requires explicit approval before creating missing records. Shared creation never saves the lesson.
+- Durable per-intent attempt evidence is written before POST. An uncertain creation is never resent, including across new reviews. Read-only rechecks cannot create even previously unattempted records. Exact returned identities, complete metadata, course scope, fresh saved baseline and review/package bindings are checked.
+- Verified records bind into schema-4 packages and enter the separate lesson association review. Existing shared records and associations are retained; resource Markdown references map to destination keys. Saved verification compares full shared-record metadata and identities.
+- Added guarded reload restoration for shared-association rehearsals. Official native vocabulary Delete permanently deletes a shared record; this implementation never invokes it. Reload authorization requires an exact recognized editor checkpoint and unchanged fresh saved baseline, followed by exact restored readback. Outside edits stop restoration.
+- Corrected shared references between demo/native collection captures and their preservation copies, and retained isolated rehearsal compatibility.
+
+## Validation and precise limits
+
+**287 tests passed, zero failures** using `node --test --test-isolation=none --test-reporter=spec`. Thirteen new tests cover shared create/reuse, uncertain outcomes, durable storage failures, stale baseline/scope/approval, receipt integrity, default metadata, serialized POST bridge encoding, no destructive requests, simulated association rehearsal/save/readback, and guarded tab reload failures. Existing controller and full regression tests passed. `git diff --check` passed.
+
+Still pending for this new feature: dedicated controller tests for the shared-review buttons; actual serialized native search-option/association DOM tests; rendered inspection of the new native-only panel; and installed-extension/live end-to-end acceptance. Current creation/search bridge tests execute the real serialized function against simulated HTTP/DOM, and association pipeline tests use the synthetic adapter. Do not represent these as live acceptance.
+
+Source companion is 0.15.0 with unarmed verification-release-23. Installed companion remains last verified at 0.12.3; no reload was performed. Existing browser policy has blocked extension-page control. A prior file-encoding update was rejected by automatic approval review because replacing from HEAD could discard unfinished work; a backup and in-place encoding repair preserved the changes instead. Nothing remains blocked by that rejection.
+
+## Resume here
+
+1. Add shared-review controller tests for exact approval, reload recovery, package replacement and read-only rechecks. Add serialized native association/search fixtures, including ambiguous options, outside edits and failed staging recovery. Inspect the rendered shared panel and keyboard/responsive states.
+2. Validate the installed companion on a separately designated disposable practice destination. Do not use the protected accepted lesson for changed-save tests. Never invoke global vocabulary Delete to undo a rehearsal. The native search control returns only seven options; if the exact reviewed record is absent, fail closed. The independent search cap is forty; capped/ambiguous results also fail closed.
+3. Complete remaining unsupported features: shared-record edits/deletions with impact/ownership review; saved objective/content removals; replacement/reordering of populated level links; asset uploads; and production destinations. Preserve current guards until those workflows have recoverable identity-aware implementation and tests.
+
+Notion sign-in and the L16: AI Lab import succeeded earlier. The final private approved package previously compared as already-matches with four levels and zero differences. The historical fresh visible-editor check and full preservation receipt remain recorded below; no new fresh live verification is claimed in this checkpoint. Private reports, credentials, source captures and downloaded lesson packages stay outside Git. The localhost:4316 server holds OAuth tokens in memory; avoid restarting it unnecessarily.
+
+Earlier entries below are historical and their unsupported-feature lists are superseded by this checkpoint.
+
 # Publishing extensions and objective verification fix — 0.14.0
 
 The requested complete publishing build is NOT finished. This release closes four implementation gaps: append-only objective creation; explicit one-to-one mapping of several revised objective descriptions; title/assessment edits within populated progressions while retaining every link identity; and targeted existing-callout edits in sections with multiple callouts.

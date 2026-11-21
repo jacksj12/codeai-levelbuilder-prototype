@@ -1,3 +1,11 @@
+# Current implementation — 0.15.0 checkpoint
+
+**287 tests pass; the full publishing build remains unfinished.** Shared resources and vocabulary now have separate create-or-reuse review, durable create-once evidence, read-only rechecks, schema-4 package binding and a separately approved lesson association save. Rehearsal restoration uses guarded reload rather than the native vocabulary Delete action, which deletes shared records globally.
+
+New shared-record paths have simulated pipeline, serialized API-bridge and reload tests. Dedicated shared-button controller tests, serialized native search/association controls, rendered review and live acceptance are still pending. Installed companion was last verified at 0.12.3; source is 0.15.0. No protected lesson or saved level was changed.
+
+Remaining work: shared-record editing/deletion, saved-content removals, replacement/reordering of saved level links, assets and production destinations. See [the current handoff](../NEXT-SESSION-HANDOFF.md) for exact next steps, preservation constraints and prior successful Notion/live verification evidence. Earlier notes below are historical.
+
 # Publishing updates in 0.14.0
 
 The current suite has **274 passing tests**. New objectives can be appended; existing objectives can be explicitly mapped one-to-one in the publishing screen while preserving IDs and level tags. Confirm the mappings before downloading. Mapping packages use schema 3 and require companion 0.14.0. Native rehearsal restores only its own unsaved additions. Independent saved verification handles alphabetical objective ordering by matching persisted IDs.

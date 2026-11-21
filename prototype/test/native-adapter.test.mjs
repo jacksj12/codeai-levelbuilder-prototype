@@ -95,7 +95,7 @@ test('reviewed native structural transfer checkpoints generated identities acros
 
 test('reviewed native transfer rejects unsupported later operations before any valid prefix',async()=>{
  const c=capture(),pkg=packageFor(c);pkg.lesson.title='Supported';pkg.lesson.frontMatter.vocabulary=['Unsupported: shared write'];const plan=await approvedPlan(pkg,normalizeNativeCapture(c)),bridge=collectionBridge(c);
- await assert.rejects(stageNativeTransferPlan(plan,bridge.call),/No fields were changed/);assert.equal(bridge.writes,0);
+ assert.ok(plan.blockers.some(b=>b.includes('verified shared record')));await assert.rejects(stageNativeTransferPlan(plan,bridge.call),/Resolve every transfer blocker/);assert.equal(bridge.writes,0);
 });
 
 test('native structural transfer recovers lost acknowledgement without duplicating a callout',async()=>{
