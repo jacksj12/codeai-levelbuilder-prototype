@@ -1,3 +1,7 @@
+## Live preservation-save acceptance
+
+Version 0.12.3 passed the installed companion unchanged-save test on lesson 8898984 on November 20, 2026: native acknowledgement, durable receipt, independent exact whole-lesson readback and automatic recheck without resend. All four original levels and three assessment flags were preserved. This scope does not establish live acceptance of arbitrary changes or cleanup.
+
 ## Release 0.12.2 unchanged save test
 
 From a fresh reusable transfer screen, confirm the practice lesson and select **Prepare unchanged save test** without choosing a package. Inspect the preserved level/assessment counts and zero changes, check approval, then choose **Approve and save once**. It invokes the same native save path with no field edits. It records the attempt before dispatch, requires native acknowledgement plus exact whole-lesson readback equality, and never resends on recheck. Missing acknowledgement remains unconfirmed even if data is unchanged. No cleanup is needed or offered. Keep the original lesson tab open.

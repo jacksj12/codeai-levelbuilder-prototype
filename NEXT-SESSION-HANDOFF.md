@@ -1,3 +1,11 @@
+# LIVE companion preservation dispatch accepted — November 20, 2026
+
+Latest report: Downloads/reviewed-transfer-98fc070f-3ce9-47c4-9d5f-b3e948ad5a0d.json, 21:15 local, companionVersion 0.12.3, destination 8898984. User explicitly approved and ran the fresh unchanged companion test after the prior pre-dispatch evidence-storage failure. Status saved-and-verified; dispatch native-editor-acknowledged; nativeAcknowledgementConfirmed true; verification passed with zero mismatches; baselineUnchanged true; automaticRecheck true; saveRetried false; no preparation error or recovery needed.
+
+Independently recomputed the reviewed request digest and verifySavedReadback from the downloaded receipt, then compared the ENTIRE readback to the prior accepted 17:30 baseline: exact equality. All original associations 397418–397421 remain on levels 104255/104271/104272/104273, with only the last three assessments. Three activities, ten sections, six callouts, three resources and all objectives/settings/content preserved.
+
+This establishes installed companion native save dispatch, acknowledgement, durable evidence, independent full preservation verification and automatic readback-only recheck for an unchanged lesson. It does not extend live acceptance to arbitrary content additions, shared collection changes or cleanup. The earlier failed attempt and all private reports remain preserved outside Git. No further user-run verification is needed for this requested preservation test.
+
 # Preservation test blocked by evidence storage — November 20, 2026
 
 User downloaded reviewed-transfer-84b4bcce-3851-4efa-b2d0-1cb4deeec413.json at 21:00 local. Version 0.12.2, destination 8898984, preservationTest true, zero planned changes, four retained levels/three assessments. Receipt is dispatching/attempted true but has NO dispatch result or verification. preparationError is durable evidence storage failure. Code persists the attempt and session before invoking send; this report stopped at that persistence boundary, and no successful native dispatch is established. Never call this a passed test or resend it blindly.
