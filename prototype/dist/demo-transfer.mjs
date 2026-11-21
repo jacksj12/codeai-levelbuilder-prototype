@@ -50,9 +50,12 @@ export function demoAdapter(state,persist){
     for(const a of state.server.activities)if(a.id==null)a.id=++activityId;
     for(const a of state.server.activities)for(const s of a.activitySections)if(s.id==null)s.id=++sectionId;
     for(const a of state.server.activities)for(const s of a.activitySections)for(const sl of s.scriptLevels)if(sl.id==null)sl.id=++id;
+    for(const [index,objective]of state.server.objectives.entries())if(objective.id==null){objective.id=40000+index;objective.key=crypto.randomUUID();}
     state.sendCount++;persist();return {outcome:'response-received',ok:true,httpStatus:200,simulated:true};
    }
    const op=request.operation,ai=op.path[1],si=op.path[3];
+   if(request.action==='append-objective'){const record={key:'objective-'+(state.editor.live.objectives.length+1),description:op.after,scriptLevelIds:[]};state.editor.live.objectives.push(record);state.editor.protection.objectives.push(clone(record));persist();return clone(state.editor);}
+   if(request.action==='remove-created-objective'){if(op.index!==state.editor.live.objectives.length-1||canonical(state.editor.live.objectives[op.index])!==canonical(op.expected)||op.expected.id!=null)throw Error('Unowned objective.');state.editor.live.objectives.pop();state.editor.protection.objectives.pop();persist();return clone(state.editor);}
    if(request.action==='set-scalar'){const value=nativeFieldValue(op);putField(state.editor.live,liveFieldPath(op),value);const p=protectedFieldPath(savedFieldPath(op));if(p)putField(state.editor.protection,p,value);persist();return clone(state.editor);}
    if(request.action==='append-activity'){
     const key='activity-'+(state.activityCounter=(state.activityCounter||0)+1),sk='activitySection-'+(state.sectionCounter=(state.sectionCounter||0)+1),section={key:sk,name:'',description:'',duration:null,remarks:false,tips:[],scriptLevels:[]};

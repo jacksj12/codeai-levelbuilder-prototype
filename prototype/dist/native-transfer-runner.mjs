@@ -1,3 +1,4 @@
+import {isObjectiveAppend} from './reviewed-objectives.mjs';
 import {savedFieldPath,restoreFieldProtection} from './reviewed-fields.mjs';
 import {clone,canonical,digest,validatePlan,applyOperation} from './transfer-core.mjs';
 import {normalizeNativeCapture} from './transfer-native.mjs';
@@ -5,11 +6,10 @@ import {unsupportedNativeActions} from './native-dom-adapter.mjs';
 
 const emptySection={title:'',duration:null,body:'',remarks:false,callouts:[],progression:null};
 const calloutTypes=['Teaching Tip','Content Corner','Discussion Goal','Assessment Opportunity','Ethics Opportunity'];
-const unsafeMultiCalloutEdit=(plan,op)=>op.kind==='set'&&op.path.length===7&&op.path[4]==='callouts'&&(plan.originalSnapshot?.lesson.activities[op.path[1]]?.sections[op.path[3]]?.callouts.length||0)>1;
 export function unsupportedNativeTransferActions(plan){
  return plan.operations.filter(op=>{
-  if(unsafeMultiCalloutEdit(plan,op))return true;
   if(!unsupportedNativeActions({operations:[op]}).length)return false;
+  if(isObjectiveAppend(op))return !Array.isArray(op.before)||typeof op.after!=='string'||!op.after.trim()||op.after.length>100000;
   const p=op.path;
   if(op.kind==='append'&&p.length===1&&p[0]==='activities')return canonical(op.after)!==canonical({title:'',duration:null,sections:[emptySection]});
   if(op.kind==='set'&&p.length===5&&p[0]==='activities'&&Number.isInteger(p[1])&&p[1]>=0&&p[2]==='sections'&&Number.isInteger(p[3])&&p[3]>=0&&p[4]==='progression'){
@@ -19,7 +19,7 @@ export function unsupportedNativeTransferActions(plan){
   if(p.length===3)return canonical(op.after)!==canonical(emptySection);
   if(p.length===5&&Number.isInteger(p[3])&&p[3]>=0&&p[4]==='callouts')return !calloutTypes.includes(op.after?.type)||typeof op.after.body!=='string'||!op.after.body.trim()||op.after.body.length>100000;
   return true;
- }).map(op=>unsafeMultiCalloutEdit(plan,op)?{...op,label:op.label+' (multi-callout native editor targeting is not verified)'}:op);
+ });
 }
 function snapshot(capture){
  const value=normalizeNativeCapture(capture);
@@ -31,7 +31,8 @@ function preserved(before,after,op){
  const protection=clone(after.nativeProtection),p=op.path;restoreFieldProtection(protection,before.nativeProtection,savedFieldPath(op));
  if(op.kind==='append'){
   const activity=protection.unmanagedActivities[p[1]];
-  if(p.length===1)protection.unmanagedActivities.pop();
+  if(isObjectiveAppend(op))protection.objectives.pop();
+  else if(p.length===1)protection.unmanagedActivities.pop();
   else if(p.length===3)activity.activitySections.pop();
   else activity.activitySections[p[3]].tips.pop();
  }else if(p.at(-1)==='progression'){
@@ -67,7 +68,7 @@ export async function stageNativeTransferPlan(plan,bridge,{journal=null,maxOpera
   const fresh=await bridge({action:'read'});
   if(canonical(fresh)!==canonical(capture)){result.status='blocked';result.reason='Outside changes detected. No further actions were taken.';break;}
   applyOperation(expected,op);
-  const action=op.kind==='set'?(op.path.at(-1)==='progression'?'append-progression':'set-scalar'):op.path.length===1?'append-activity':op.path.length===3?'append-section':'append-callout';
+  const action=isObjectiveAppend(op)?'append-objective':op.kind==='set'?(op.path.at(-1)==='progression'?'append-progression':'set-scalar'):op.path.length===1?'append-activity':op.path.length===3?'append-section':'append-callout';
   let nextCapture;
   try{
    nextCapture=await bridge({action,mode:action==='append-progression'?'unsaved-level-staging':op.kind==='set'?'unsaved-scalar-staging':'unsaved-structure-staging',operation:op,expectedCaptureDigest:await digest(capture)});

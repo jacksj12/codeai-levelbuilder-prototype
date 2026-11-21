@@ -94,7 +94,7 @@ test('reviewed native structural transfer checkpoints generated identities acros
 });
 
 test('reviewed native transfer rejects unsupported later operations before any valid prefix',async()=>{
- const c=capture(),pkg=packageFor(c);pkg.lesson.title='Supported';pkg.lesson.frontMatter.objectives=['Unsupported'];const plan=await approvedPlan(pkg,normalizeNativeCapture(c)),bridge=collectionBridge(c);
+ const c=capture(),pkg=packageFor(c);pkg.lesson.title='Supported';pkg.lesson.frontMatter.vocabulary=['Unsupported: shared write'];const plan=await approvedPlan(pkg,normalizeNativeCapture(c)),bridge=collectionBridge(c);
  await assert.rejects(stageNativeTransferPlan(plan,bridge.call),/No fields were changed/);assert.equal(bridge.writes,0);
 });
 

@@ -1,1 +1,27 @@
-{"buildPath":"code"}
+{
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "prototype/dist/notion.html"
+        ],
+        "createdAt": "2026-11-21T06:57:59.843Z",
+        "reason": "Agent verified rendered external styles: h1 36.8px, h2 21.6px, body 15-16px. Detector misses linked stylesheet hierarchy."
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "prototype/dist/publish.html"
+        ],
+        "createdAt": "2026-11-21T06:57:59.901Z",
+        "reason": "Agent verified rendered external styles: h1 36.8px, h2 21.6px, body 15-16px. Detector misses linked stylesheet hierarchy."
+      }
+    ]
+  }
+}

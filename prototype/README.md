@@ -1,6 +1,10 @@
-# Current implementation — release 0.13.1
+# Current implementation — release 0.14.0
 
-Notion OAuth and the supported practice-publishing handoff are implemented with **260 passing tests**. A single uniquely identifiable objective description can now be published while retaining its native ID and level tags; other collection changes remain blocked. Live Notion sign-in, full brief import, and fresh visible-editor preservation checks passed. The final approved package matches the verified saved lesson: no additional save is required. See [NOTION-AND-PUBLISHING.md](NOTION-AND-PUBLISHING.md) for evidence and limits. Run `npm start` at `http://localhost:4316`. Earlier release notes below are historical.
+**274 tests pass.** Publishing now supports new objectives, explicit one-to-one mappings for multiple revised objective descriptions, progression title/assessment edits without replacing existing level associations, and editing a chosen callout in a section with multiple callouts. Objective readback follows saved IDs across the server's alphabetical sorting. Existing identities, tags and unreviewed fields are checked throughout rehearsal, recovery and saved verification.
+
+The broader publishing build is still incomplete: shared-resource creation, vocabulary writes, saved objective/content removals, replacement/reordering of existing level associations, asset uploads and production destinations remain blocked. These guards were not removed. New release paths have automated control and pipeline coverage, not new live changed-save acceptance. The installed companion was last verified at 0.12.3; reload to 0.14.0 before a future reviewed changed publication. Explicit objective mappings use schema 3 so older companions reject them.
+
+Live Notion sign-in/import and the earlier fresh visible-editor preservation check remain recorded in [NOTION-AND-PUBLISHING.md](NOTION-AND-PUBLISHING.md). The final approved private package still compares as already-matches: four levels, zero changes or blockers. No live lesson was staged or saved for this release. Run `npm start` at `http://localhost:4316`. Earlier release notes below are historical.
 
 # Historical validation — release 0.12.4
 

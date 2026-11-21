@@ -1,3 +1,4 @@
+import {objectiveReplacements} from './objective-mapping.mjs';
 import {SANDBOX,objectivesEqual} from './core.mjs';
 import {validDestination} from './destination.mjs';
 import {approvalBlockers} from './review.mjs';
@@ -43,7 +44,7 @@ export function validateDestination(snapshot){
 }
 export function packageProblems(pkg){
  const errors=[];
- if(!(pkg?.schemaVersion===1||pkg?.schemaVersion===2&&pkg.publication?.schemaVersion===1)||!(pkg.sandbox===SANDBOX||/^https:\/\/levelbuilder-studio\.code\.org\/lessons\/[1-9]\d*\/edit$/.test(pkg.sandbox)))throw Error('Choose a review package for the assigned practice lesson.');
+ if(!(pkg?.schemaVersion===1||[2,3].includes(pkg?.schemaVersion)&&pkg.publication?.schemaVersion===1)||!(pkg.sandbox===SANDBOX||/^https:\/\/levelbuilder-studio\.code\.org\/lessons\/[1-9]\d*\/edit$/.test(pkg.sandbox)))throw Error('Choose a review package for the assigned practice lesson.');
  if(canonical(pkg).length>8_000_000)throw Error('This package exceeds the 8 MB transfer-review limit. Replace embedded assets with verified HTTPS links.');
  if(pkg.status!=='approved-locally')errors.push('Approve this draft locally before transfer.');
  if(!Array.isArray(pkg.conflicts))errors.push('The package is missing revision-conflict information.');
@@ -110,12 +111,16 @@ export async function buildTransferPlan(pkg,snapshot,decisions={}){
  await propose(['title'],proposed.title,'Lesson title');
  await scalarFields(['frontMatter'],proposed.frontMatter,'Front matter',[...TEXT_FIELDS,'vocabulary']);
  const oldObjectives=working.frontMatter.objectives,newObjectives=proposed.frontMatter.objectives;
- if(!objectivesEqual(oldObjectives,newObjectives)){
+ if(pkg.objectiveMapping){
+  try{for(const replacement of objectiveReplacements(pkg.objectiveMapping,snapshot.destination,snapshot.raw?.live?.objectives,newObjectives))await propose(['frontMatter','objectives',replacement.index],replacement.description,'Objective '+(replacement.index+1)+' / description');}
+  catch(error){blockers.push(error.message);}
+ }else if(!objectivesEqual(oldObjectives,newObjectives)){
   const removed=oldObjectives.map((description,index)=>({description,index})).filter(o=>!newObjectives.includes(o.description));
   const added=newObjectives.filter(description=>!oldObjectives.includes(description));
   // Only one uniquely identified text replacement can retain objective IDs and level tags without guessing.
   if(oldObjectives.length===newObjectives.length&&new Set(oldObjectives).size===oldObjectives.length&&new Set(newObjectives).size===newObjectives.length&&removed.length===1&&added.length===1&&added[0].trim())
    await propose(['frontMatter','objectives',removed[0].index],added[0],'Objective '+(removed[0].index+1)+' / description');
+  else if(!removed.length&&new Set(oldObjectives).size===oldObjectives.length&&new Set(newObjectives).size===newObjectives.length&&added.every(description=>description.trim())){for(const description of added)await propose(['frontMatter','objectives'],description,'Add objective / '+description,'append');}
   else await propose(['frontMatter','objectives'],newObjectives,'Front matter / objectives');
  }
  for(const resource of proposed.resources){
@@ -137,7 +142,14 @@ export async function buildTransferPlan(pkg,snapshot,decisions={}){
     else await scalarFields([...sp,'callouts',ci],section.callouts[ci],label+' / Callout '+(ci+1),['type','body']);
    }
    // A progression is a single reviewed association group; unknown destination settings remain outside it.
-   if(section.progression)await propose([...sp,'progression'],section.progression,label+' / Level associations');
+   if(section.progression){
+    const existingProgression=readPath(working,[...sp,'progression']);
+    // Retain association IDs and all hidden settings when only metadata changes.
+    if(existingProgression&&equal(existingProgression.levels.map(l=>[l.key,l.number]),section.progression.levels.map(l=>[l.key,l.number]))){
+     await propose([...sp,'progression','title'],section.progression.title,label+' / Progression title');
+     for(let li=0;li<section.progression.levels.length;li++)await propose([...sp,'progression','levels',li,'assessment'],section.progression.levels[li].assessment,label+' / '+section.progression.levels[li].key+' / Assessment');
+    }else await propose([...sp,'progression'],section.progression,label+' / Level associations');
+   }
    const existing=readPath(before,sp);
    if(existing?.callouts.length>section.callouts.length)preserved.push({label:label+' / Extra destination callouts',reason:'Not removed'});
    if(existing?.progression&&!section.progression)preserved.push({label:label+' / Destination level associations',reason:'Not removed'});

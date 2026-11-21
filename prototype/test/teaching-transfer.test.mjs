@@ -46,7 +46,7 @@ test('readback rejects altered teaching fields, record identities, and unlisted 
  const staged=clone(receipt.stagedCapture);staged.live.fields.teacherOverview='Outside';await assert.rejects(validateStagedSaveReview(job.review,staged),/differs/);
 });
 test('unsupported objectives block the complete batch before any edits',async()=>{
- for(const mutate of [l=>l.frontMatter.objectives.push('New objective')]){
+ for(const mutate of [l=>l.frontMatter.objectives.pop()]){
   const h=harness();mutate(h.state.pkg.lesson);h.state.pkg.baseline=clone(h.state.pkg.lesson);const initial=canonical(h.state.editor);
   await assert.rejects(prepareTransfer(h.state.pkg,h.io),/unresolved|separate review/);assert.equal(canonical(h.state.editor),initial);assert.equal(h.state.sendCount,0);
  }

@@ -64,7 +64,7 @@ export async function nativeEditorBridge(request={action:'read'}){
   const otherTables=[...document.querySelectorAll('#edit-container table')].filter(table=>{if(!table.querySelector('thead')&&table.querySelector('.uitest-ProgressPill'))return false;if(table.querySelector('thead'))return true;let parent=table.parentElement;while(parent&&!parent.classList.contains('uitest-activity-card')){if([...parent.children].some(n=>n.classList.contains('uitest-level-token-name')))return false;parent=parent.parentElement;}return true;}).map(table=>({headers:[...table.querySelectorAll('thead th')].map(c=>c.textContent.trim()),rows:[...table.querySelectorAll('tbody tr')].map(row=>row.textContent.trim())})).filter(t=>!['Key|Name|Type|Audience|URL|Actions','Word|Definition|Actions','Description|Levels|Actions'].includes(t.headers.join('|')));
   return {schemaVersion:1,kind:'native-dom-capture',readerVersion:'native-scalars-v1',fixture:Boolean(fixture),destination:structuredClone(destination),saved,
    live:{fields,activities:hidden.activities,objectives:hidden.objectives,resources,vocabularies},
-   protection:{bootstrap:saved,unmanagedActivities,objectives:hidden.objectives,resources,vocabularies,controls,otherTables},blockers,remoteWrites:false};
+   protection:{bootstrap:saved,unmanagedActivities,objectives:structuredClone(hidden.objectives),resources,vocabularies,controls,otherTables},blockers,remoteWrites:false};
  }
  const stable=value=>Array.isArray(value)?'['+value.map(stable).join(',')+']':value&&typeof value==='object'?'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}':JSON.stringify(value);
  const fingerprint=async value=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(stable(value))))].map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -327,11 +327,47 @@ export async function nativeEditorBridge(request={action:'read'}){
   }
   if(after.blockers.length)throw Error(after.blockers.join(' '));return after;
  }
+ if(['append-objective','remove-created-objective'].includes(request.action)){
+  const before=read();if(before.blockers.length||request.mode!=='unsaved-structure-staging'||await fingerprint(before)!==request.expectedCaptureDigest)throw Error('The editor changed before objective staging.');
+  const table=tableFor(['Description','Levels','Actions']),op=request.operation;
+  const expand=()=>{const headings=[...document.querySelectorAll('#edit-container h2 button')].filter(b=>b.textContent.trim()==='Objectives');if(headings.length===1)headings[0].click();};
+  if(request.action==='append-objective'){
+   if(op?.kind!=='append'||stable(op.path)!=='["frontMatter","objectives"]'||stable(op.before)!==stable(before.live.objectives.map(o=>o.description))||typeof op.after!=='string'||!op.after.trim()||op.after.length>100000)throw Error('The proposed new objective is invalid.');
+   const buttons=[...document.querySelectorAll('#edit-container button')].filter(b=>b.textContent.trim()==='Create New Objective');if(buttons.length!==1||buttons[0].disabled)throw Error('The new objective control is unavailable.');if(!buttons[0].getClientRects().length)expand();checkDeadline();buttons[0].dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0,buttons:1}));await settle();
+   const row=table.querySelectorAll('tbody tr')[before.live.objectives.length],inputs=row?.querySelectorAll('td:first-child input[type="text"]'),save=row?.querySelectorAll('.fa-check');if(inputs?.length!==1||save?.length!==1||inputs[0].value!=='')throw Error('The new objective row did not open uniquely.');
+   checkDeadline();Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(inputs[0],op.after);inputs[0].dispatchEvent(new Event('input',{bubbles:true}));inputs[0].dispatchEvent(new Event('change',{bubbles:true}));await settle();
+   const immediate=read(),record=immediate.live.objectives.at(-1),project=structuredClone(immediate);project.live.objectives.pop();project.protection.objectives.pop();project.blockers=[];if(stable(project)!==stable(before)||record?.id!=null||record?.description!==''||stable(record.scriptLevelIds)!=='[]')throw Error('Outside edits appeared while creating the objective.');
+   checkDeadline();save[0].parentElement.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0,buttons:1}));await settle();return read();
+  }
+  const record=before.live.objectives[op?.index];if(!Number.isInteger(op?.index)||op.index!==before.live.objectives.length-1||op.index<before.saved.objectives.length||record?.id!=null||stable(record)!==stable(op.expected))throw Error('Only the exact appended unsaved objective may be removed.');
+  const row=table.querySelectorAll('tbody tr')[op.index],remove=row?.querySelectorAll('.unit-test-remove-objective');if(remove?.length!==1)throw Error('The new objective removal control is ambiguous.');if(!row.getClientRects().length)expand();checkDeadline();remove[0].dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0,buttons:1}));await settle();const after=read(),expected=structuredClone(before);expected.live.objectives.pop();expected.protection.objectives.pop();if(stable(after)!==stable(expected))throw Error('Objective cleanup changed unrelated content.');return after;
+ }
  if(request.action!=='set-scalar'||request.mode!=='unsaved-scalar-staging')throw Error('Unsupported native action. Saving and collection mutations are unavailable.');
  const current=read();if(current.blockers.length)throw Error(current.blockers.join(' '));
  if(await fingerprint(current)!==request.expectedCaptureDigest)throw Error('Native editor changed before the action. Nothing was filled.');
  const op=request.operation,path=op?.path;
  if(op?.kind!=='set'||!Array.isArray(path)||path.some(k=>['__proto__','prototype','constructor'].includes(k)))throw Error('Only existing scalar fields are supported.');
+ if(path[0]==='activities'&&path[2]==='sections'&&path[4]==='progression'&&[path[1],path[3]].every(n=>Number.isInteger(n)&&n>=0)&&(path.length===6&&path[5]==='title'||path.length===8&&path[5]==='levels'&&Number.isInteger(path[6])&&path[6]>=0&&path[7]==='assessment')){
+  const card=document.querySelectorAll('.uitest-activity-card')[path[1]],section=current.live.activities[path[1]]?.activitySections[path[3]],root=card?.querySelectorAll('textarea')[path[3]]?.parentElement;
+  if(!root||!section?.scriptLevels?.length)throw Error('The existing progression is missing.');
+  if(path.length===6){
+   const labels=[...root.querySelectorAll('label')].filter(n=>[...n.childNodes].filter(c=>c.nodeType===3||c.nodeType===1&&c.tagName==='SPAN').map(c=>c.textContent).join('').trim()==='Progression Title:');
+   const input=labels.length===1?labels[0].querySelector('input'):null;
+   if(!input||input.value!==op.before||(section.progressionName||'')!==op.before||typeof op.after!=='string'||op.after.length>100000||input.disabled||input.readOnly)throw Error('The progression title differs from its review.');
+   checkDeadline();Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,op.after);input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));await settle();return read();
+  }
+  const record=section.scriptLevels[path[6]],name=record?.levels?.length===1?record.levels[0].name:null;
+  if(!name||section.scriptLevels.filter(sl=>sl.levels?.some(l=>l.name===name)).length!==1||record.assessment!==op.before||typeof op.after!=='boolean')throw Error('The reviewed level association is ambiguous or changed.');
+  const buttons=root.querySelectorAll('button.uitest-open-add-level-button');if(buttons.length!==1||buttons[0].disabled)throw Error('The native level editor is unavailable.');
+  checkDeadline();buttons[0].click();await settle();
+  const dialogs=[...document.querySelectorAll('.modal-content')].filter(n=>n.getClientRects().length&&[...n.querySelectorAll('h2')].some(h=>h.textContent.trim()==='Add Levels'));if(dialogs.length!==1)throw Error('The native level editor did not open uniquely.');
+  const modal=dialogs[0],tokens=[...modal.querySelectorAll('.uitest-level-token-name')].filter(n=>[...n.querySelectorAll('span')].some(s=>s.textContent.trim()===name));if(tokens.length!==1)throw Error('The existing level token is ambiguous.');
+  checkDeadline();tokens[0].click();await settle();
+  const labels=[...tokens[0].parentElement.querySelectorAll('label')].filter(n=>n.querySelector('span')?.textContent.trim()==='Assessment'),check=labels.length===1?labels[0].querySelector('input[type="checkbox"]'):null;
+  if(!check||check.disabled||check.checked!==op.before)throw Error('The saved assessment flag differs from the reviewed control.');
+  const immediate=read();if(stable(immediate.live)!==stable(current.live)||stable(immediate.saved)!==stable(current.saved))throw Error('Outside edits appeared before changing the assessment flag.');
+  checkDeadline();check.click();await settle();const close=[...modal.querySelectorAll('button')].filter(b=>b.textContent.trim()==='Close and save');if(close.length!==1)throw Error('The level editor close control is ambiguous.');checkDeadline();close[0].click();await settle();return read();
+ }
  if(path.length===3&&path[0]==='frontMatter'&&path[1]==='objectives'&&Number.isInteger(path[2])&&path[2]>=0){
   const objective=current.live.objectives[path[2]];
   if(!objective||objective.description!==op.before||typeof op.after!=='string'||!op.after.trim()||op.after.length>100000)throw Error('The objective differs from the reviewed replacement.');
@@ -350,7 +386,6 @@ export async function nativeEditorBridge(request={action:'read'}){
   const types={'Teaching Tip':'teachingTip','Content Corner':'contentCorner','Discussion Goal':'discussionGoal','Assessment Opportunity':'assessmentOpportunity','Ethics Opportunity':'ethicsOpportunity'};
   const tip=current.live.activities[path[1]]?.activitySections[path[3]]?.tips?.[path[5]],key=path[6]==='body'?'markdown':'type',before=key==='type'?types[op.before]:op.before,after=key==='type'?types[op.after]:op.after;
   if(!tip||tip[key]!==before||typeof after!=='string'||after.length>100000)throw Error('The existing callout differs from the reviewed change.');
-  if(current.live.activities[path[1]].activitySections[path[3]].tips.length>1)throw Error('Existing callout edits in sections with multiple callouts are blocked until native targeting is verified. No callout was changed.');
   const card=document.querySelectorAll('.uitest-activity-card')[path[1]],root=card?.querySelectorAll('textarea')[path[3]]?.parentElement,icons=root?.querySelectorAll('span[data-tip][data-for] > i');
   if(!icons||icons.length!==current.live.activities[path[1]].activitySections[path[3]].tips.length)throw Error('Existing callout controls could not be uniquely mapped.');
   if(!icons[path[5]].getClientRects().length){
@@ -422,6 +457,7 @@ export function unsupportedNativeActions(plan){
   if(p.length===3&&p[0]==='frontMatter'&&p[1]==='objectives'&&Number.isInteger(p[2])&&p[2]>=0)return typeof op.after!=='string'||!op.after.trim()||op.after.length>100000;
   if(p.length===2&&p[0]==='frontMatter'&&TEXT_FIELDS.includes(p[1]))return false;
   if(p[0]==='activities'&&Number.isInteger(p[1])&&p[1]>=0){
+   if(p[2]==='sections'&&Number.isInteger(p[3])&&p[3]>=0&&p[4]==='progression'){if(p.length===6&&p[5]==='title')return typeof op.after!=='string'||op.after.length>100000;if(p.length===8&&p[5]==='levels'&&Number.isInteger(p[6])&&p[6]>=0&&p[7]==='assessment')return typeof op.after!=='boolean';}
    if(p.length===7&&p[2]==='sections'&&Number.isInteger(p[3])&&p[3]>=0&&p[4]==='callouts'&&Number.isInteger(p[5])&&p[5]>=0)return p[6]==='body'?typeof op.after!=='string'||op.after.length>100000:p[6]!=='type'||!['Teaching Tip','Content Corner','Discussion Goal','Assessment Opportunity','Ethics Opportunity'].includes(op.after);
    if(p.length===3&&['title','duration'].includes(p[2]))return p[2]==='duration'&&op.after!==null&&!Number.isInteger(op.after);
    if(p.length===5&&p[2]==='sections'&&Number.isInteger(p[3])&&p[3]>=0&&['title','duration','body','remarks'].includes(p[4]))return p[4]==='duration'&&op.after!==null&&(!Number.isInteger(op.after)||op.after===0);

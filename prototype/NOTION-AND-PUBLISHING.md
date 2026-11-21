@@ -1,3 +1,15 @@
+# Publishing updates in 0.14.0
+
+The current suite has **274 passing tests**. New objectives can be appended; existing objectives can be explicitly mapped one-to-one in the publishing screen while preserving IDs and level tags. Confirm the mappings before downloading. Mapping packages use schema 3 and require companion 0.14.0. Native rehearsal restores only its own unsaved additions. Independent saved verification handles alphabetical objective ordering by matching persisted IDs.
+
+Progression titles and assessment flags can change without replacing their existing level links. Existing callouts can be edited when their section has several callouts; the native dialog and complete captured result must match the reviewed target. These paths have simulated end-to-end and serialized native-control tests. They have not been exercised as new live changed saves.
+
+The complete publishing build remains unfinished. Shared-resource creation, vocabulary writes, saved-content removals, replacement/reordering of saved level links, asset uploads and production destinations are blocked. The current approved private lesson package still requires no save: the production comparison returns four existing levels and no differences. No saved lesson content was changed for 0.14.0.
+
+Source evidence for the verification fix: [Lesson summary and objective update](https://github.com/code-dot-org/code-dot-org/blob/staging/dashboard/app/models/lesson.rb). Native controls: [Objectives editor](https://github.com/code-dot-org/code-dot-org/blob/staging/apps/src/levelbuilder/lesson-editor/ObjectivesEditor.jsx), [section controls](https://github.com/code-dot-org/code-dot-org/blob/staging/apps/src/levelbuilder/lesson-editor/ActivitySectionCardButtons.jsx), [callout icon](https://github.com/code-dot-org/code-dot-org/blob/staging/apps/src/levelbuilder/lesson-editor/LessonTipIconWithTooltip.jsx).
+
+The entries below record the prior Notion setup and acceptance history; their version numbers and earlier capability limits are historical.
+
 # Notion sign-in and practice publishing — 0.13.1
 
 ## Local startup
