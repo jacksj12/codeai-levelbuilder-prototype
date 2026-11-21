@@ -31,7 +31,7 @@ export async function runApprovedSave(job,{readSaved,readEditor,checkUsage,stage
  if(receipt?.attempted){onProgress('Checking the earlier save attempt without sending it again.');return verify();}
  onProgress('Checking the saved baseline and preserving a restore point.');
  const fresh=await readSaved();
- const review=await buildSaveReview(rehearsal,fresh.lesson,{originalLessonJson:fresh.originalLessonJson});
+ const review=await buildSaveReview(rehearsal,fresh.lesson,{originalLessonJson:fresh.originalLessonJson,transport:approved.transport??'direct-api'});
  if(await saveRequestDigest(review)!==requestDigest)throw Error('The refreshed request differs from the approved save.');
  const usage=await checkUsage(review);
  if(usage.passed!==true)throw Error('These levels are already used in the destination unit: '+usage.conflicts.map(c=>c.name).join(', ')+'. Create separately reviewed copies or use another unit; no save was sent.');

@@ -32,7 +32,7 @@ export function generate(source){
   }
   ensureActivity();let title='',duration=null;
   if(heading){title=heading[1].trim();duration=Number(heading[2]);notes=notes.slice(heading[0].length).trim();}
-  const pieces=notes.split(/^(Teaching Tip|Assessment Opportunity)\s*$/m), converted=convertNotes(pieces[0]);
+  const pieces=notes.split(/^(Teaching Tip|Content Corner|Discussion Goal|Assessment Opportunity|Ethics Opportunity)\s*$/m), converted=convertNotes(pieces[0]);
   const callouts=[];for(let i=1;i<pieces.length;i+=2){const c=convertNotes(pieces[i+1]||'');callouts.push({type:pieces[i],body:c.text});converted.changes.push(...c.changes);}
   const progression=structuredClone(source.levelAssociations?.[slide.id]||null);
   if(/Lesson\s+\d+,?\s+Levels?\s+\d/i.test(notes)&&!progression)warnings.push(`Slide ${slide.number}: transition text needs confirmed level associations.`);

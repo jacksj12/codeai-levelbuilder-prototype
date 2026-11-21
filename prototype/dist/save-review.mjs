@@ -17,8 +17,9 @@ function replaceGroup(root,path,source){
 function comparableLesson(lesson){const value=clone(lesson);value.frontMatter.objectives.sort();return value;}
 
 // Pure preparation only. No networking, CSRF access, Save click or writer.
-export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),originalLessonJson}={}){
+export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),originalLessonJson,transport='native-editor'}={}){
  assert(rehearsal?.status==='passed-and-restored'&&rehearsal.checksPassed===true&&rehearsal.restored===true,'A completed and restored accepted-package rehearsal is required.');
+ assert(['native-editor','direct-api'].includes(transport),'Unsupported save transport.');
  const plan=rehearsal.plan;await validatePlan(plan);
  assert(validDestination(plan.destination),'Choose a valid reviewed practice destination.');
  const initial=rehearsal.initialCapture,staged=rehearsal.stagedCapture;
@@ -78,7 +79,7 @@ export async function buildSaveReview(rehearsal,freshSaved,{now=Date.now(),origi
  const sections=normalized.lesson.activities.flatMap(a=>a.sections),levels=sections.flatMap(s=>s.progression?.levels||[]);
  const expectedCounts={activities:normalized.lesson.activities.length,sections:sections.length,callouts:sections.reduce((n,s)=>n+s.callouts.length,0),resources:normalized.lesson.resources.length,levels:levels.length,assessments:levels.filter(l=>l.assessment).length};
  const review={schemaVersion:1,kind:'native-save-review',status:'ready-for-review',createdAt:now,expiresAt:now+10*60*1000,
-  destination:clone(plan.destination),remoteWrites:false,saveAllowed:false,requiresUserApproval:true,requiresRestaging:true,
+  destination:clone(plan.destination),transport,remoteWrites:false,saveAllowed:false,requiresUserApproval:true,requiresRestaging:true,
   baselineDigest:await digest(freshSaved),stagedDigest:await digest(staged),rehearsalPlanId:plan.id,changes,fieldChanges,sectionAdditions,activityAdditions,calloutAdditions,
   request:{method:'PUT',url:'https://levelbuilder-studio.code.org/lessons/'+plan.destination.id,contentType:'application/json;charset=UTF-8',body:JSON.stringify(payload)},
   baseline:clone(freshSaved),baselineNativeProtection:clone(initial.protection),expectedLesson:clone(plan.expectedLesson),expectedCounts,
@@ -101,7 +102,7 @@ export async function saveRequestDigest(review){
  for(const key of ['objectives','activities','resources','vocabularies','programmingExpressions','standards','opportunityStandards','jitPlConceptIds','announcements','originalLessonData']){
   assert(typeof payload[key]==='string','Incomplete reviewed request field '+key+'.');payload[key]=JSON.parse(payload[key]);
  }
- return digest({method:request.method,url:request.url,contentType:request.contentType,payload});
+ return digest({method:request.method,url:request.url,contentType:request.contentType,payload,...(review.transport?{transport:review.transport}:{})});
 }
 
 export async function validateStagedSaveReview(review,capture){

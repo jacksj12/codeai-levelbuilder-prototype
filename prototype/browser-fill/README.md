@@ -1,3 +1,9 @@
+## Release 0.11.0 save behavior
+
+New transfer reviews use the native editor's **Save and Keep Editing** control after the existing final baseline and capture checks. Approval binds this method as well as the intended content. The companion records the attempt first, clicks once, and independently rereads saved data. Missing acknowledgement never causes fallback or resend. Legacy reports retain their transport and remain readback-only after an attempt.
+
+Load the updated `prototype` directory to install this release, preserving retained run reports. The agent did not reload the installed extension. Local serialized transport tests passed; a separately approved manual native save independently verified the four original levels in lesson 8898984. These are distinct acceptance results. No additional live save or cleanup is authorized by installation instructions.
+
 # Native browser companion — setup and limits
 
 The **Lesson Studio native companion** lives in the parent `prototype` folder. Its reusable transfer screen reads an owned practice destination, rehearses and restores supported changes, shows an exact review, and requires separate approval before one guarded save. It is distinct from the read-only `api-companion` extension and from the older bounded unsaved staging tools in this popup.

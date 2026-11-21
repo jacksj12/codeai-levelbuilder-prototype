@@ -1,3 +1,4 @@
+import {structureProblems} from './source-revisions.mjs';
 import {validateSource} from './core.mjs';
 export function workspaceBackup(state){return {kind:'lesson-studio-workspace',schemaVersion:1,createdAt:new Date().toISOString(),state:structuredClone(state)};}
 export function readWorkspaceBackup(text){
@@ -7,6 +8,7 @@ export function readWorkspaceBackup(text){
  for(const lesson of [s.draft,s.generated,...(s.baseline?[s.baseline]:[])]){
   if(!lesson||typeof lesson.title!=='string'||!lesson.frontMatter)throw Error('The backup is missing lesson content.');
   for(const key of ['activities','sections','resources','warnings'])if(!Array.isArray(lesson[key]))throw Error('The backup has incomplete lesson lists.');
+  if(structureProblems(lesson).length)throw Error('The backup has orphaned or duplicate teaching records.');
   if(!Array.isArray(lesson.frontMatter.objectives)||!Array.isArray(lesson.frontMatter.vocabulary))throw Error('The backup has incomplete front matter.');
   if(lesson.sections.some(x=>!x||typeof x.id!=='string'||typeof x.body!=='string'||!Array.isArray(x.callouts)))throw Error('The backup has an incomplete teaching section.');
  }

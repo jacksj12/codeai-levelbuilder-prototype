@@ -1,9 +1,11 @@
+import {structureProblems} from './source-revisions.mjs';
 import {renderMarkdown} from './preview-markdown.mjs';
 // Local review rules. No network requests or destination writes.
 export const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export function approvalBlockers(state){
  return [
+  ...structureProblems(state.draft).map(note=>({target:'guide',note})),
   ...(state.flags||[]).filter(f=>!f.resolved).map(f=>({target:f.target,note:f.note,flagId:f.id})),
   ...(state.conflicts.length?[{target:'revisions',note:`${state.conflicts.length} source conflicts need a decision`}]:[]),
   ...(state.resourceBuffer!=null?[{target:'resources',note:'Apply or discard pending resource edits'}]:[])

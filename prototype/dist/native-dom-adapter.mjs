@@ -79,7 +79,7 @@ export async function nativeEditorBridge(request={action:'read'}){
   if(req.method!=='PUT'||req.url!=='https://levelbuilder-studio.code.org/lessons/'+destination.id||req.contentType!=='application/json;charset=UTF-8')throw Error('The approved save target changed.');
   const payload=JSON.parse(req.body),semantic=structuredClone(payload);
   for(const key of ['objectives','activities','resources','vocabularies','programmingExpressions','standards','opportunityStandards','jitPlConceptIds','announcements','originalLessonData'])semantic[key]=JSON.parse(semantic[key]);
-  const approvedDigest=await fingerprint({method:req.method,url:req.url,contentType:req.contentType,payload:semantic});
+  const approvedDigest=await fingerprint({method:req.method,url:req.url,contentType:req.contentType,payload:semantic,...(review.transport?{transport:review.transport}:{})});
   if(approvedDigest!==request.approval.approvedRequestDigest)throw Error('The request does not match the user-approved save.');
   const current=read();if(current.blockers.length||await fingerprint(current)!==request.expectedCaptureDigest)throw Error('The editor changed before saving.');
   const fresh=await fetch('/lessons/'+destination.id+'/edit',{credentials:'same-origin',redirect:'error',cache:'no-store'});
@@ -109,6 +109,22 @@ export async function nativeEditorBridge(request={action:'read'}){
    for(const k of allowed.slice(0,12))if(stable(semantic[k])!==stable(freshSaved[k]))throw Error('Cleanup changes unrelated lesson fields.');
    const collections={objectives:freshSaved.objectives,resources:freshSaved.resources.map(r=>r.key),vocabularies:freshSaved.vocabularies.map(r=>r.key),programmingExpressions:freshSaved.programmingExpressions,standards:freshSaved.standards,opportunityStandards:freshSaved.opportunityStandards,jitPlConceptIds:freshSaved.jitPlConcepts.map(r=>r.id),announcements:freshSaved.announcements};
    for(const [k,v]of Object.entries(collections))if(stable(semantic[k])!==stable(v))throw Error('Cleanup changes unrelated collections.');
+  }
+  if(!cleanup&&review.transport==='native-editor'){
+   // Use the deployed editor's own serializer and authenticated save handler.
+   // The durable attempt is already recorded. Never fall back to an API send.
+   const buttons=[...document.querySelectorAll('#edit-container button')].filter(b=>b.textContent.trim()==='Save and Keep Editing'&&b.getClientRects().length);
+   if(buttons.length!==1||buttons[0].disabled)throw Error('The native Save and Keep Editing control is unavailable or ambiguous. No save was clicked.');
+   const button=buttons[0],savedMarker=()=>document.body.textContent.match(/Last saved at:[^\n\r]*/)?.[0]||'',beforeMarker=savedMarker();
+   checkDeadline();if(await fingerprint(read())!==request.expectedCaptureDigest)throw Error('The editor changed before the native save.');
+   return await new Promise(resolve=>{
+    let observer,timer,finished=false;
+    const finish=outcome=>{if(finished)return;finished=true;observer?.disconnect();clearTimeout(timer);resolve({kind:'native-save-result',attempted:true,transport:'native-editor',outcome,saveRetried:false});};
+    const inspect=()=>{if(!button.disabled&&savedMarker()!==beforeMarker)finish('native-editor-acknowledged');};
+    observer=new MutationObserver(inspect);observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true});
+    timer=setTimeout(()=>finish('unknown'),Math.max(1,Math.min(10000,(request.deadlineAt??Date.now()+10000)-Date.now())));
+    try{button.click();inspect();}catch{finish('unknown');}
+   });
   }
   const csrf=document.querySelector('meta[name="csrf-token"]')?.content;
   if(!csrf)throw Error('The editor sign-in token is unavailable.');

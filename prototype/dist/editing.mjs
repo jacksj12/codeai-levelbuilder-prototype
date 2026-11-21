@@ -21,3 +21,18 @@ export function addSection(draft,{id,activityId,afterId,title,body,duration}){
  draft.sections.splice(index,0,section);
  return section.id;
 }
+
+export function addActivity(draft,{id,title,duration}){
+ if(!id||draft.activities.some(a=>a.id===id))throw Error('The activity needs a unique identity.');
+ if(typeof title!=='string'||!title.trim())throw Error('Enter an activity title.');
+ if(!Number.isFinite(duration)||duration<0)throw Error('Minutes must be a nonnegative number.');
+ draft.activities.push({id,title:title.trim(),duration,origin:'local'});
+ draft.duration=draft.activities.reduce((n,a)=>n+a.duration,0);return id;
+}
+export function moveRecord(draft,kind,id,direction){
+ if(!['activities','sections'].includes(kind)||![-1,1].includes(direction))throw Error('Choose a valid move.');
+ const records=draft[kind],record=records.find(r=>r.id===id);if(!record)throw Error('This item no longer exists.');
+ const siblings=kind==='sections'?records.filter(r=>r.activityId===record.activityId):records;
+ const index=siblings.indexOf(record),other=siblings[index+direction];if(!other)return false;
+ const a=records.indexOf(record),b=records.indexOf(other);[records[a],records[b]]=[records[b],records[a]];return true;
+}

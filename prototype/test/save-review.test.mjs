@@ -183,3 +183,11 @@ test('a failed independent read can recover with readback only and clears its st
  const first=await runApprovedSave(h.job,h.dependencies);assert.equal(first.status,'save-not-confirmed');assert.equal(first.readbackError,'Temporary read failure');
  offline=false;const next=await runApprovedSave(h.job,h.dependencies);assert.equal(next.status,'saved-and-verified');assert.equal(next.readbackError,undefined);assert.equal(h.sendCount,1);
 });
+
+test('new reviews bind native transport while legacy direct API reviews retain their digest',async()=>{
+ const {saved,rehearsal}=await evidence();
+ const native=await buildSaveReview(rehearsal,saved,{originalLessonJson:JSON.stringify(saved)}),api=await buildSaveReview(rehearsal,saved,{originalLessonJson:JSON.stringify(saved),transport:'direct-api'});
+ assert.equal(native.transport,'native-editor');assert.notEqual(await saveRequestDigest(native),await saveRequestDigest(api));
+ const old=clone(api);delete old.transport;assert.notEqual(await saveRequestDigest(old),await saveRequestDigest(native));
+ await assert.rejects(buildSaveReview(rehearsal,saved,{originalLessonJson:JSON.stringify(saved),transport:'unknown'}),/Unsupported save transport/);
+});

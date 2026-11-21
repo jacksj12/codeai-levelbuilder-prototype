@@ -60,6 +60,7 @@ function render(){
   const review=state.job.review,levels=reviewedLevelGroups(review).flatMap(c=>c.addLevels),summary=el('div','',$('changes'));summary.className='summary';
   for(const [value,label]of [[levels.length,'existing level links'],[levels.filter(l=>l.assessment).length,'assessments'],[0,'new level copies']]){const item=el('div','',summary);el('strong',value,item);el('span',label,item);}
   el('p','Destination title: '+review.baseline.name,$('changes'));
+  el('p',review.transport==='native-editor'?'Save method: the native editor’s Save and Keep Editing control, followed by independent saved verification.':'Save method: direct API request (legacy review).',$('changes'));
   const table=el('table','',$('changes')),head=el('tr','',el('thead','',table));for(const text of ['Section','Level group','Existing level','Assessment'])el('th',text,head);
   const body=el('tbody','',table);for(const c of reviewedLevelGroups(review))for(const l of c.addLevels){const row=el('tr','',body);el('td',c.section||c.activity,row);el('td',c.progression||'(untitled)',row);el('td',l.name,row);el('td',l.assessment?'Yes':'No',row);}
   if(review.activityAdditions?.length){el('h3','New activities',$('changes'));for(const c of review.activityAdditions){const d=el('details','',$('changes'));el('summary',c.label+': '+c.activity.name,d);el('p','Before: no activity. After: '+c.activity.name+' · '+(c.activity.duration??'Untimed')+' minutes. Sections are listed below.',d);}}

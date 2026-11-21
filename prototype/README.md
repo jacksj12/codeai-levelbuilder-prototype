@@ -85,4 +85,12 @@ node scripts/audit-transfer.mjs "C:/path/to/reviewed-transfer-report.json"
 
 The audit verifies review integrity and recomputes saved readback checks. Output contains diagnostic facts, not the full private lesson or authentication data. It never resends or authorizes a request. Preserve original reports outside Git.
 
-The latest live failure remains unresolved: the selected destination's four level associations were absent after HTTP 200 and remained absent on recheck. Version 0.10.6 closes the diagnostic gap and tests recovery; it is not a proven server-persistence fix. No new live save was performed. The installed companion must eventually load the updated checkout to capture summaries on a separately authorized future attempt; do not restart or resend the retained failed run.
+The historical direct-request failure remains unexplained. A later, separately approved native save successfully persisted all four original levels in lesson 8898984, independently verified with unrelated content unchanged. Version 0.11.0 defaults new reviews to that native editor handler and keeps verification independent. The installed companion was not reloaded in this session; the new serialized branch has local regression coverage, not installed-extension live acceptance. Never restart or resend the retained failed run.
+
+## Local authoring and revisions (0.11.0)
+
+In Teaching Guide, use **Add activity**, **Add section**, and **Move up / Move down**. Section moves stay within their activity. Blank timing and zero remain distinct. Reimporting unchanged source JSON preserves these additions and their order. All five callout headings are recognized in speaker notes.
+
+Revised sources merge separate fields independently. Conflicting edits and blank text deletions appear in Revision review. Removing a source activity asks for one explicit decision covering its child sections, including local guidance. Keeping the group preserves it on later unchanged imports. Invalid orphan records block approval and backup import.
+
+If two tabs edit the same local workspace, the later stale tab saves into a separate recovery workspace and updates its URL. Both drafts remain available. Export backups to preserve them outside browser storage.

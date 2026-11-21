@@ -1,3 +1,28 @@
+# Native save recovery and completed local authoring — November 20, 2026
+
+Companion 0.11.0. This entry supersedes the unresolved live-state claim below; historical failed receipts remain unchanged.
+
+## Live result
+
+The user explicitly approved ONE fresh native save after reviewing the four original associations staged in lesson 8898984. Save and Keep Editing was clicked once. An independent fresh editor read verified levels 104255, 104271, 104272 and 104273, saved association IDs 397418–397421. Only the last three are assessments. The chatbot is in Test, Score, and Reflect; the assessments are in Check for Understanding. Removing only those new associations and progression names from the readback yields the original whole-lesson baseline exactly. Teaching content, resources, objectives, settings and existing record identities were preserved. No source cleanup or second save occurred.
+
+Private attempt, fresh readback and verification files are in the ChatGPT backup/evidence folder, not Git. The new native result does not rewrite or revive the historical failed direct-request receipt. The underlying deployed HTTP-200/no-op cause remains unknown because the original response body was discarded. The proven recovery is the native editor save; do not invent a server-side root cause.
+
+## Build completed in this release
+
+- Newly prepared reviews default to the deployed editor's Save and Keep Editing handler. Transport choice is bound to the reviewed digest and approval. The final bridge retains baseline, capture, destination and expiry guards; clicks one unambiguous enabled save control once; and never falls back to a direct PUT or retries. A native acknowledgement is only diagnostic: independent saved readback still determines success. Legacy reports keep their original digest and transport for verification.
+- Field-level source reconciliation preserves independent local edits. Activity deletion is one explicit grouped decision that includes local child sections. Blank text deletions require decisions; invalid orphan/duplicate structures block approval and backup import. Source ordering merges preserve local anchors and conflicting order changes require decisions.
+- Local authoring now adds activities, moves activities and sections, preserves zero-minute sections, and parses all five callout types from source notes. Added content survives unchanged source imports, export and reload.
+- Concurrent workspace changes fork a recovery workspace instead of overwriting the other tab. Storage errors retain the in-memory draft and existing stored content.
+
+Validation: 202 automated tests passed, zero failed. Serialized native bridge tests cover one native click, zero companion PUTs, ambiguous/disabled controls, transport-bound approval and timeout without fallback. Full regression includes prior save, restoration, cleanup, mapping and repeat-readback paths. Browser acceptance created and moved a local activity, added a zero-minute section, refreshed unchanged sources and reloaded with content intact. No additional live save was used for acceptance.
+
+## Remaining integration boundaries
+
+This is not a claim that every historical roadmap item is finished. Direct Google/Notion sign-in requires an application authentication configuration that this checkout does not contain; current import remains normalized JSON. Shared resource/objective/vocabulary creation, arbitrary publishing, complete destination-aware revision reconciliation and cross-curriculum live acceptance remain outside the implemented transfer surface. The reusable native-click branch has serialized local tests but has not been run through an installed extension live; the separately approved native UI save above is the actual deployed acceptance. Live receipt-owned cleanup remains unaccepted. Do not perform another save or cleanup under the exhausted one-save approval.
+
+Work is in the GitHub checkout. The installed companion has not been reloaded. Preserve the historical attempted run; use a fresh review for future authorized work after loading the updated extension. No new permissions or dependencies were added.
+
 # Autonomous continuation — response diagnostics and recovery, November 20, 2026
 
 The user resumed implementation and requested autonomous build/test loops with no input. This entry supersedes the paused-work instruction below; historical receipts and exact-save boundaries remain preserved.

@@ -47,7 +47,7 @@ export function packageProblems(pkg){
  if(canonical(pkg).length>8_000_000)throw Error('This package exceeds the 8 MB transfer-review limit. Replace embedded assets with verified HTTPS links.');
  if(pkg.status!=='approved-locally')errors.push('Approve this draft locally before transfer.');
  if(!Array.isArray(pkg.conflicts))errors.push('The package is missing revision-conflict information.');
- else errors.push(...approvalBlockers({conflicts:pkg.conflicts,flags:pkg.review?.flags||[],resourceBuffer:pkg.review?.resourceBuffer}).map(b=>b.note));
+ else errors.push(...approvalBlockers({draft:pkg.lesson,conflicts:pkg.conflicts,flags:pkg.review?.flags||[],resourceBuffer:pkg.review?.resourceBuffer}).map(b=>b.note));
  const proposed=normalizedDraft(pkg.lesson);
  if(!proposed.title.trim())errors.push('The lesson title is empty.');
  if(!pkg.baseline)errors.push('The approved baseline is missing.');

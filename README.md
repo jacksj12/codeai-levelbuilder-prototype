@@ -19,7 +19,7 @@ Run the engineering checks from `prototype`:
 node --test --test-isolation=none
 ```
 
-Latest delivery check: **175 passed, 0 failed**. These checks are not independent curriculum acceptance.
+Latest delivery check: **202 passed, 0 failed**. These checks are not independent curriculum acceptance.
 
 ## Delivery guide
 
@@ -29,6 +29,8 @@ Latest delivery check: **175 passed, 0 failed**. These checks are not independen
 - [Activity transfer checks](prototype/ACTIVITY-TRANSFER-ACCEPTANCE.md)
 - [Read-only API comparison extension](prototype/api-companion/README.md)
 - [Level Builder research](prototype/LEVELBUILDER-INTEGRATION.md)
+
+Release **0.11.0** adds native-editor save dispatch, field-level source revisions, activity/section ordering and concurrent-tab recovery. The four original levels are now independently verified in lesson **8898984** after the one separately approved native save.
 
 The latest accepted live result is a user-approved **native UI save** of the complete AI Lab proposal, independently read back with zero mismatches. It contains three activities, ten sections, six callouts and four original level links, three marked assessment. This does not establish automatic end-to-end acceptance of the reusable companion or live cleanup. Preserve that accepted lesson; no further save or cleanup is authorized by these instructions.
 

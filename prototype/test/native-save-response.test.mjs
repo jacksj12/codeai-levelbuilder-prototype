@@ -6,26 +6,28 @@ import {digest} from '../dist/transfer-core.mjs';
 
 // Run the actual serialized extension function with a minimal editor DOM and
 // fake HTTP responses. No browser, live request, or test-only production branch.
-async function dispatch(response){
+async function dispatch(response,{native=false,ambiguous=false,disabled=false,acknowledge=true,tamperTransport=false}={}){
  const destination={id:123,url:'https://levelbuilder-studio.code.org/lessons/123/edit'},saved={id:123,activities:[]},raw=JSON.stringify(saved);
  const names=['Title','Overview','Student Overview','Purpose','Preparation','Assessment Opportunities'];
  const labels=names.map(name=>({childNodes:[{nodeType:3,textContent:name}],querySelectorAll:()=>[{value:''}]}));
  const tables=[['Key','Name','Type','Audience','URL','Actions'],['Word','Definition','Actions']].map(headers=>({querySelector:s=>s==='thead'?{textContent:headers.join(' ')}:null,querySelectorAll:s=>s==='thead th'?headers.map(textContent=>({textContent})):[]}));
  const bootstrap={getAttribute:()=>raw};
- const document={querySelector:s=>s==='script[data-lesson]'?bootstrap:s==='meta[name="csrf-token"]'?{content:'SYNTHETIC-SECRET'}:null,
-  querySelectorAll:s=>s==='#edit-container label'?labels:s==='#edit-container table'?tables:s.includes('input[type="hidden"]')?[{value:'[]'}]:[]};
+ let clicks=0;
+ const button={textContent:'Save and Keep Editing',disabled,getClientRects:()=>[{}],click:()=>{clicks++;if(acknowledge)document.body.textContent='Last saved at: synthetic saved time';}};
+ const document={body:{textContent:''},querySelector:s=>s==='script[data-lesson]'?bootstrap:s==='meta[name="csrf-token"]'?{content:'SYNTHETIC-SECRET'}:null,
+  querySelectorAll:s=>s==='#edit-container button'?(ambiguous?[button,button]:[button]):s==='#edit-container label'?labels:s==='#edit-container table'?tables:s.includes('input[type="hidden"]')?[{value:'[]'}]:[]};
  let puts=0;
- const context=vm.createContext({document,location:new URL(destination.url),structuredClone,crypto,TextEncoder,MessageChannel,DOMParser:class{parseFromString(){return {querySelector:()=>bootstrap};}},
+ const context=vm.createContext({document,location:new URL(destination.url),structuredClone,crypto,TextEncoder,MessageChannel,setTimeout,clearTimeout,MutationObserver:class{observe(){}disconnect(){}},DOMParser:class{parseFromString(){return {querySelector:()=>bootstrap};}},
   fetch:async(url,options)=>{if(options.method==='PUT'){puts++;return response;}return {ok:true,text:async()=>'<synthetic baseline>'};}});
  const bridge=vm.runInContext('('+nativeEditorBridge.toString()+')',context),base={destination,practiceConfirmed:true};
  const capture=await bridge({...base,action:'read'});assert.deepEqual(Array.from(capture.blockers),[]);
  const payload={originalLessonData:raw};for(const k of ['objectives','activities','resources','vocabularies','programmingExpressions','standards','opportunityStandards','jitPlConceptIds','announcements'])payload[k]='[]';
  const request={method:'PUT',url:'https://levelbuilder-studio.code.org/lessons/123',contentType:'application/json;charset=UTF-8',body:JSON.stringify(payload)};
- const review={kind:'native-save-review',destination,expiresAt:Date.now()+60000,baselineDigest:await digest(saved),request};review.id=await digest(review);
+ const review={kind:'native-save-review',...(native?{transport:'native-editor'}:{}),destination,expiresAt:Date.now()+60000,baselineDigest:await digest(saved),request};review.id=await digest(review);
  const semantic=Object.fromEntries(Object.entries(payload).map(([k,v])=>[k,JSON.parse(v)]));
- const approval={approved:true,approvedRequestDigest:await digest({method:request.method,url:request.url,contentType:request.contentType,payload:semantic})};
- const result=await bridge({...base,action:'save-approved-review',mode:'explicit-approved-save',review,approval,expectedCaptureDigest:await digest(capture)});
- assert.equal(puts,1);return JSON.parse(JSON.stringify(result));
+ const approval={approved:true,approvedRequestDigest:await digest({method:request.method,url:request.url,contentType:request.contentType,payload:semantic,...(native?{transport:tamperTransport?'direct-api':'native-editor'}:{})})};
+ let result;try{result=await bridge({...base,deadlineAt:Date.now()+100,action:'save-approved-review',mode:'explicit-approved-save',review,approval,expectedCaptureDigest:await digest(capture)});}catch(error){assert.equal(clicks,0);assert.equal(puts,0);throw error;}
+ assert.equal(puts,native?0:1);if(native)assert.equal(clicks,1);return JSON.parse(JSON.stringify(result));
 }
 const json=value=>new Response(JSON.stringify(value),{headers:{'Content-Type':'application/json'}});
 test('serialized save bridge retains only allowlisted response identities and counts',async()=>{
@@ -47,4 +49,14 @@ test('response summaries bound association lists and disclose truncation',async(
 test('rejected server response excludes authentication lines and never reports success',async()=>{
  const result=await dispatch(new Response('Conflict detected\nsession=secret',{status:409,headers:{'Content-Type':'text/plain'}}));
  assert.equal(result.outcome,'rejected');assert.equal(result.errorMessage,'Conflict detected');assert.equal(result.responseSummary,undefined);
+});
+
+test('native save invokes the exact editor control once with no companion PUT',async()=>{
+ const result=await dispatch(null,{native:true});assert.equal(result.transport,'native-editor');assert.equal(result.outcome,'native-editor-acknowledged');assert.equal(result.saveRetried,false);
+});
+test('native save timeout retains an unknown attempt and never falls back to direct API',async()=>{
+ const result=await dispatch(null,{native:true,acknowledge:false});assert.equal(result.outcome,'unknown');assert.equal(result.attempted,true);
+});
+test('ambiguous, disabled and changed-transport native approvals block before any save click',async()=>{
+ for(const options of [{ambiguous:true},{disabled:true},{tamperTransport:true}])await assert.rejects(dispatch(null,{native:true,...options}),/unavailable|ambiguous|approved/);
 });
