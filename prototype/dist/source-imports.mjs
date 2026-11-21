@@ -127,6 +127,11 @@ export async function importSourceFile(file){
  const text=await file.text();if(text.length>2_000_000)throw Error('Text source must be smaller than 2 MB.');
  if(/\.(md|markdown)$/i.test(file.name))return notionMarkdown(text);
  let data;try{data=JSON.parse(text);}catch{throw Error('Choose source JSON, a Notion Markdown export, or a PowerPoint deck.');}
+ if(data.kind==='lesson-studio-brief'){
+  const brief=data.brief,allowed=new Set(Object.values(fields));
+  if(data.schemaVersion!==1||brief?.kind!=='brief'||!brief.fields||Object.keys(brief.fields).some(key=>!allowed.has(key))||!Array.isArray(brief.warnings)||brief.warnings.some(w=>typeof w!=='string'))throw Error('The exported Notion brief is invalid.');
+  validateSource({title:brief.title||'Imported brief',slides:[{id:'validation',number:1,notes:'Validation'}],...brief.fields});return structuredClone(brief);
+ }
  if(data.presentationId)return slidesJson(data);if(data.object==='list'||data.blocks)return notionBlocks(data);validateSource(data);return {kind:'source',source:data,warnings:[]};
 }
 export function combineSourceImports(base,imports){

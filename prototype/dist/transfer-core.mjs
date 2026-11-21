@@ -43,7 +43,7 @@ export function validateDestination(snapshot){
 }
 export function packageProblems(pkg){
  const errors=[];
- if(pkg?.schemaVersion!==1||!(pkg.sandbox===SANDBOX||/^https:\/\/levelbuilder-studio\.code\.org\/lessons\/[1-9]\d*\/edit$/.test(pkg.sandbox)))throw Error('Choose a review package for the assigned practice lesson.');
+ if(!(pkg?.schemaVersion===1||pkg?.schemaVersion===2&&pkg.publication?.schemaVersion===1)||!(pkg.sandbox===SANDBOX||/^https:\/\/levelbuilder-studio\.code\.org\/lessons\/[1-9]\d*\/edit$/.test(pkg.sandbox)))throw Error('Choose a review package for the assigned practice lesson.');
  if(canonical(pkg).length>8_000_000)throw Error('This package exceeds the 8 MB transfer-review limit. Replace embedded assets with verified HTTPS links.');
  if(pkg.status!=='approved-locally')errors.push('Approve this draft locally before transfer.');
  if(!Array.isArray(pkg.conflicts))errors.push('The package is missing revision-conflict information.');

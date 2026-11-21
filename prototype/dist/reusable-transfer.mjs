@@ -1,3 +1,4 @@
+import {validatePublicationBinding} from './publishing.mjs';
 import {clone,canonical,digest,packageProblems} from './transfer-core.mjs';
 import {buildSaveReview,saveRequestDigest,validateSaveReview} from './save-review.mjs';
 import {runApprovedSave} from './approved-save.mjs';
@@ -36,7 +37,8 @@ export async function readTransferBaseline(io){
 
 export async function prepareTransfer(pkg,io){
  const problems=packageProblems(pkg);if(problems.length)throw Error(problems.join(' '));
- const source=clone(pkg),{editor}=await readTransferBaseline(io);
+ const source=clone(pkg),{editor,fresh}=await readTransferBaseline(io);
+ await validatePublicationBinding(source,editor.destination,fresh.lesson);
  await io.checkpoint({status:'before-rehearsal',initialCapture:editor});
  const rehearsal=await runAcceptedNativeRehearsal(io.bridge,source,{onProgress:io.onProgress,onCheckpoint:point=>io.checkpoint({status:'rehearsing',stage:point})});
  await io.checkpoint({status:rehearsal.status,stage:rehearsal});

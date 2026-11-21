@@ -1,4 +1,10 @@
-# Ten requested build/test passes completed — release 0.12.4
+# Notion OAuth and publishing handoff implemented — 0.13.0, live authorization pending
++
++See prototype/NOTION-AND-PUBLISHING.md. Local server at http://localhost:4316 supports server-side OAuth, session-bound one-use state, refresh, disconnect, complete read-only Notion imports and portable brief exports. New publishing screen performs baseline preflight, exports schema-v2 destination-bound packages, and independently verifies native receipts. Companion preparation enforces baseline/package binding before staging; older companions reject schema v2. Supported native scope is unchanged; shared collections remain blocked.
++
++255 tests pass. Browser publishing flow verified with a synthetic package/baseline/receipt, including reload and no-resend controls. Actual Notion OAuth has no configured credentials yet. Chrome tab 630151567 is on the signed-in Notion developer portal with the New connection form prepared: Lesson Studio, OAuth, redirect http://localhost:4316/api/notion/callback. Portal rejected numeric IP redirect. Create connection accepts Developer Terms and creates credentials; account-holder click is required. It has NOT been clicked. After the user does so, inspect the actual result, configure read-only capabilities and use the app's client credentials privately on the local server, then request the final page-access authorization if needed. Never print credentials or commit .env. No live lesson edits, staging, saves or cleanup occurred; preserve accepted 8898984 and all four levels. Installed companion remains 0.12.3 until a necessary user reload; source release is 0.13.0.
++
++# Ten requested build/test passes completed — release 0.12.4
 
 See prototype/TEN-PASS-VALIDATION.md for all ten passes, 241 passing tests, real import checks and exact acceptance boundaries. Source imports and destination revisions are hardened; no new live saves or cleanup. The live lesson and four original levels were untouched. The retained successful receipt passed offline revalidation; browser imported the actual deck and brief in a separate local workspace. Local changes are ready; installed companion remains the previously accepted 0.12.3 until a later necessary reload. No user click was needed for these ten passes.
 

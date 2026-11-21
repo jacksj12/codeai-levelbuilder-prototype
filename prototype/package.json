@@ -1,1 +1,9 @@
-{"name":"lesson-studio-prototype","private":true,"type":"module","scripts":{"test":"node --test","start":"node server.mjs"}}
+{
+  "name": "lesson-studio-prototype",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "start": "node --env-file-if-exists=.env server.mjs"
+  }
+}

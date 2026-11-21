@@ -85,3 +85,8 @@ test('PowerPoint rejects conflicting entry headers and duplicate ignored media n
  const sizes=zip(new Map([['notes.xml','Text']]),{compressed:false});sizes.writeUInt32LE(99,22);await assert.rejects(unzipOffice(sizes),/sizes or checksums/);
  const duplicate={size:2,*[Symbol.iterator](){yield ['image.png','A'];yield ['image.png','B'];}};await assert.rejects(unzipOffice(zip(duplicate)),/unsafe/);
 });
+
+test('signed-in Notion brief exports can be imported into a separate extension workspace',async()=>{
+ const brief=notionMarkdown('## Teacher overview\nSigned-in content'),data={kind:'lesson-studio-brief',schemaVersion:1,brief},file={name:'brief.json',size:200,text:async()=>JSON.stringify(data)};
+ assert.deepEqual(await importSourceFile(file),brief);brief.fields.levelAssociations={unexpected:true};await assert.rejects(importSourceFile(file),/invalid/);
+});

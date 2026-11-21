@@ -1,4 +1,8 @@
-# Current validation — release 0.12.4
+# Current implementation — release 0.13.0
++
++Notion OAuth and the supported practice-publishing handoff are implemented and locally validated with **255 passing tests**. Live Notion sign-in awaits the prepared app registration and account-holder authorization. See [NOTION-AND-PUBLISHING.md](NOTION-AND-PUBLISHING.md) for setup, verified behavior and remaining publishing limitations. Run `npm start` and use `http://localhost:4316`. No accepted live lesson content was changed. Earlier release notes below are historical.
++
++# Current validation — release 0.12.4
 
 The ten requested build/test passes are complete: **241 tests pass**. Read [TEN-PASS-VALIDATION.md](TEN-PASS-VALIDATION.md) for changes, real import checks and remaining scope. The installed 0.12.3 companion unchanged-save workflow previously passed with all four levels and existing content preserved. This release makes local import/revision changes only; no additional live save or cleanup was performed. Historical notes below describe earlier states.
 

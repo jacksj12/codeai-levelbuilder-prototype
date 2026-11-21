@@ -153,7 +153,7 @@ $('#workspace-backup').onclick=()=>download('lesson-workspace-backup.json',JSON.
 $('#workspace-restore').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>32000000)throw Error('Choose a workspace backup smaller than 32 MB.');const id=crypto.randomUUID();restoreWorkspace(localStorage,await file.text(),id);const target=new URL(location.href);target.searchParams.set('workspace',id);location.href=target;}catch(error){notice('Backup was not opened. '+error.message+' Your current workspace is unchanged.');}finally{e.target.value='';}};
 
 const pendingSourceId=new URL(location.href).searchParams.get('sourceImport');
-if(pendingSourceId){try{const item=JSON.parse(localStorage.getItem('lesson-studio-pending-source-'+pendingSourceId));if(!item)throw Error('The imported deck is no longer available. Import it again from its Slides tab.');const result=combineSourceImports(state.source,[item]);$('#source-input').value=JSON.stringify(result.source,null,2);$('#import-error').textContent=`Imported ${result.source.slides.length} slides. ${result.warnings.join(' ')} The current brief remains in the package; review it or choose a Notion brief before generating.`;$('#import-dialog').showModal();}catch(error){notice(error.message);}}
+if(pendingSourceId){try{const item=JSON.parse(localStorage.getItem('lesson-studio-pending-source-'+pendingSourceId));if(!item)throw Error('The imported deck is no longer available. Import it again from its Slides tab.');const result=combineSourceImports(state.source,[item]);$('#source-input').value=JSON.stringify(result.source,null,2);$('#import-error').textContent=`Imported ${item.kind==='brief'?'Notion brief':result.source.slides.length+' slides'}. ${result.warnings.join(' ')} Review the combined sources before generating.`;$('#import-dialog').showModal();}catch(error){notice(error.message);}}
 
 let importingDestination=false;
 document.addEventListener('change',async event=>{
@@ -164,3 +164,7 @@ document.addEventListener('change',async event=>{
  else{const result=await prepareWorkspaceImport(()=>state,file,mergeDestinationReport);state=result.state;persist();render();notice(`${result.updates} saved-lesson updates applied locally; ${result.conflicts} conflicts require decisions. Level Builder is unchanged. ${result.notices.join(' ')}`);}
  }catch(error){notice(error.message);}finally{importingDestination=false;input.disabled=false;input.value='';}
 });
+
+if(location.protocol==='http:'&&['127.0.0.1','localhost'].includes(location.hostname)){const link=new URL('notion.html',location.href);if(workspaceId)link.searchParams.set('workspace',workspaceId);$('#notion-link').href=link.href;}
+
+$('#publish').onclick=()=>{try{const pkg=reviewPackage(),problems=approvalBlockers(state);if(!state.approved||problems.length)throw Error('Review and approve the complete lesson before publishing.');sessionStorage.setItem('lesson-publication-input',JSON.stringify(pkg));location.href='publish.html';}catch(error){notice(error.message);}};
