@@ -1,3 +1,9 @@
+# Automatic check target correction — November 20, 2026
+
+Release 0.12.1 fixes the legacy popup automatic check being restricted to lesson 8898985 while the current owned playground is 8898984. The exact current canonical URL is now supported without allowing arbitrary official lessons. The launcher shows progress, binds the run to its selected destination, refuses reuse of another lesson controller, and does not silently restart an existing check. Recovery records are separated by destination. Downloaded workflow and completed verification reports now include companionVersion. Full suite: 213 passing tests; syntax and whitespace checks passed.
+
+The user downloaded native-scalar-staging-evidence (2).json, which contains historical passed-and-restored evidence for 8898985; it is not evidence of a fresh automatic check on 8898984. The fresh reviewed-transfer-04c23637 baseline reports do pass current editor/saved equality and retain all four associations 397418–397421 with correct flags, but carry no version field. The user must reload 0.12.1 and launch the automatic check from the popup on 8898984, not Download evidence or the reusable transfer screen. No new live save or cleanup was performed.
+
 # Source imports and connected-browser boundary — November 20, 2026
 
 Release 0.12.0 implements source imports beyond normalized JSON:

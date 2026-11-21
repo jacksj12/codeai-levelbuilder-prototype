@@ -187,7 +187,7 @@ $('recover').onclick=()=>run(async()=>{
  if(state.receipt?.attempted)throw Error('A save was attempted; only saved readback is available.');io??=await makeIO();
  await recoverNativeLevelCheck(io.bridge,state.checkpoint.stage);state.needsRecovery=false;delete state.job;persist();status('This run’s unsaved changes were restored. Prepare a fresh review.');
 });
-function downloadReport(){const blob=URL.createObjectURL(new Blob([JSON.stringify({...state,notice:native?'Private transfer evidence: retain locally.':'SIMULATED DEMO — not live save evidence.'},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=blob;a.download=(native?'reviewed-transfer-':'demo-transfer-')+runId+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(blob),1000);}
+function downloadReport(){const blob=URL.createObjectURL(new Blob([JSON.stringify({...state,companionVersion:native?chrome.runtime.getManifest().version:null,notice:native?'Private transfer evidence: retain locally.':'SIMULATED DEMO — not live save evidence.'},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=blob;a.download=(native?'reviewed-transfer-':'demo-transfer-')+runId+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(blob),1000);}
 $('download').onclick=downloadReport;
 $('download-baseline').onclick=downloadReport;
 function renderCleanup(){

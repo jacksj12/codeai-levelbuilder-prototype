@@ -1,3 +1,4 @@
+import {verificationDestination} from './native-target.mjs';
 import {sourcePageExport} from './source-page-export.mjs';
 import {unzipOffice,presentationParts} from '../dist/source-imports.mjs';
 import {createNativeTransport} from './native-transport.mjs';
@@ -94,20 +95,24 @@ try{
 
 
 $('verify').onclick=async()=>{
- if(running)return;
+ if(running)return;running=true;$('verify').disabled=true;notice('Checking the selected playground and opening the automatic check…');
  try{
+  const [tab]=await chrome.tabs.query({active:true,currentWindow:true});if(!tab?.id)throw Error('Open the playground editor first.');
+  const destination=verificationDestination(tab.url);
   const existing=Number(localStorage.getItem('native-verification-controller-tab'));
-  if(Number.isInteger(existing)&&existing>0){try{await chrome.tabs.update(existing,{active:true});const latest=JSON.parse(localStorage.getItem('native-verification-latest')||'null');if(latest?.status!=='running'&&latest?.structure?.status!=='running'&&latest?.levels?.status!=='running')await chrome.tabs.reload(existing);return;}catch{localStorage.removeItem('native-verification-controller-tab');localStorage.removeItem('native-verification-owner');}}
-  const [tab]=await chrome.tabs.query({active:true,currentWindow:true});
-  if(!tab?.id)throw Error('Open the assigned playground editor first.');
-  state.tabId=tab.id;
-  const capture=await bridge({action:'read'});
+  if(Number.isInteger(existing)&&existing>0){
+   let controller;try{controller=await chrome.tabs.get(existing);}catch{localStorage.removeItem('native-verification-controller-tab');localStorage.removeItem('native-verification-owner');}
+   if(controller){const token=new URL(controller.url).hash.slice(1),run=JSON.parse(localStorage.getItem('native-verification-run-'+token)||'null');
+    if(run?.tabId!==tab.id)throw Error('An earlier verification tab belongs to another lesson. Preserve its report and close that verification tab before starting here.');
+    await chrome.tabs.update(existing,{active:true});notice('The existing check is open. Inspect its status; it was not restarted.');return;
+   }
+  }
+  state.tabId=tab.id;transport=createEditorTransport();
+  const capture=await bridge({action:'read',...(destination?{destination,practiceConfirmed:true}:{})});
   if(capture.blockers.length)throw Error(capture.blockers.join(' '));
-  const token=crypto.randomUUID();
-  localStorage.setItem('native-verification-run-'+token,JSON.stringify({tabId:tab.id,createdAt:Date.now()}));
-  await chrome.tabs.create({url:chrome.runtime.getURL('browser-fill/verification.html')+'#'+token});
-  notice('Automatic verification opened in its own tab. The popup can close.');
- }catch(error){notice(error.message);}
+  const token=crypto.randomUUID();localStorage.setItem('native-verification-run-'+token,JSON.stringify({tabId:tab.id,destination,createdAt:Date.now()}));
+  await chrome.tabs.create({url:chrome.runtime.getURL('browser-fill/verification.html')+'#'+token});notice('Automatic verification opened in its own tab. The popup can close.');
+ }catch(error){notice(error.message);}finally{running=false;$('verify').disabled=false;}
 };
 
 $('resolve-levels').onclick=async()=>{

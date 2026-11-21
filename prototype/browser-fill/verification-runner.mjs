@@ -6,13 +6,13 @@ import {readAssignedLesson} from '../api-companion/read-lesson.mjs';
 import {clone,canonical} from '../dist/transfer-core.mjs';
 import {runAcceptedNativeRehearsal,recoverNativeLevelCheck} from '../dist/native-level-verification.mjs';
 import {createNativeTransport} from './native-transport.mjs';
-import {prepareNativeTarget} from './native-target.mjs';
+import {prepareNativeTarget,verificationDestination} from './native-target.mjs';
 import {runNativeStructureVerification,recoverNativeStructureCheck} from '../dist/native-structure-verification.mjs';
 import {nativeEditorBridge} from '../dist/native-dom-adapter.mjs';
 import {runNativeVerification,recoverNativeVerification} from '../dist/native-verification.mjs';
 import {normalizeNativeCapture} from '../dist/transfer-native.mjs';
 const status=document.getElementById('status'),report=document.getElementById('report'),download=document.getElementById('download');
-let evidence,bridge,previous,targetState;
+let evidence,bridge,previous,targetState,latestKey='native-verification-latest';
 let continueUpdates=true,revision;
 const continuation=document.getElementById('continuation');
 continuation.onclick=()=>{continueUpdates=!continueUpdates;continuation.textContent=continueUpdates?'Stop automatic continuation':'Resume automatic continuation';};
@@ -40,7 +40,8 @@ try{
  const token=new URL(location.href).hash.slice(1),key='native-verification-run-'+token;
  const serialized=localStorage.getItem(key);if(!serialized)throw Error('Open this check from the companion on your playground editor.');
  const run=JSON.parse(serialized);
- previous=JSON.parse(localStorage.getItem('native-verification-latest')||'null');
+ const selected=verificationDestination((await chrome.tabs.get(run.tabId)).url);if(canonical(selected)!==canonical(run.destination||null))throw Error('The selected verification destination changed. No checks were started.');
+ latestKey='native-verification-latest-'+(selected?.id||8898985);previous=JSON.parse(localStorage.getItem(latestKey)||'null');
  const owner=localStorage.getItem('native-verification-owner');
  if(owner&&owner!==token){status.textContent='Another verification tab owns this editor. No checks were started here.';return;}
  localStorage.setItem('native-verification-owner',token);
@@ -50,7 +51,7 @@ try{
  revision=(await(await fetch(chrome.runtime.getURL('browser-fill/automation-revision.json'),{cache:'no-store'})).json()).revision;
  targetState=await prepareNativeTarget(chrome.tabs,run.tabId);
  bridge=createNativeTransport(async encoded=>{
-  const [result]=await chrome.scripting.executeScript({target:{tabId:run.tabId},injectImmediately:true,func:nativeEditorBridge,args:[encoded]});
+  const [result]=await chrome.scripting.executeScript({target:{tabId:run.tabId},injectImmediately:true,func:nativeEditorBridge,args:[JSON.stringify({...JSON.parse(encoded),...(run.destination?{destination:run.destination,practiceConfirmed:true}:{})})]});
   return result?.result;
  });
  // Access is limited to the tab authorized when the companion was opened;
@@ -111,22 +112,22 @@ try{
   status.textContent='Recovering the earlier temporary verification changes before starting new checks.';
   recovery=await recoverNativeVerification(bridge,previous);
  }
- evidence=await runNativeVerification(bridge,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{localStorage.setItem('native-verification-latest',JSON.stringify(checkpoint));}});
+ evidence=await runNativeVerification(bridge,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{localStorage.setItem(latestKey,JSON.stringify(checkpoint));}});
  evidence.runnerVersion='native-accepted-levels-10';evidence.targetState=targetState;evidence.revision=revision;evidence.generatedAt=new Date().toISOString();if(recovery)evidence.recovery=recovery;if(structuralRecovery)evidence.structuralRecovery=structuralRecovery;if(levelRecovery)evidence.levelRecovery=levelRecovery;
  if(evidence.status==='passed-and-restored'){
-  evidence.structure=await runNativeStructureVerification(bridge,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{localStorage.setItem('native-verification-latest',JSON.stringify({...evidence,restored:false,structure:checkpoint}));}});
+  evidence.structure=await runNativeStructureVerification(bridge,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{localStorage.setItem(latestKey,JSON.stringify({...evidence,restored:false,structure:checkpoint}));}});
   if(evidence.structure.status!=='passed-and-restored'){evidence.status='blocked';evidence.restored=evidence.structure.restored;evidence.error=evidence.structure.error;evidence.restorationError=evidence.structure.restorationError;}
  }
  if(evidence.status==='passed-and-restored'&&!revision.startsWith('verification-release-')){
   const response=await fetch(chrome.runtime.getURL('browser-fill/accepted-rehearsal.json'),{cache:'no-store'});
   if(!response.ok)throw Error('The locally approved rehearsal package is unavailable.');
   const pkg=await response.json();
-  evidence.levels=await runAcceptedNativeRehearsal(bridge,pkg,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{localStorage.setItem('native-verification-latest',JSON.stringify({...evidence,restored:false,levels:checkpoint}));}});
+  evidence.levels=await runAcceptedNativeRehearsal(bridge,pkg,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{localStorage.setItem(latestKey,JSON.stringify({...evidence,restored:false,levels:checkpoint}));}});
   if(evidence.levels.status!=='passed-and-restored'){evidence.status='blocked';evidence.restored=evidence.levels.restored;evidence.error=evidence.levels.error;evidence.restorationError=evidence.levels.restorationError;}
  }
  if(revision.startsWith('verification-release-'))evidence.acceptedPackageCheck={status:'not-configured',reason:'The release default runs field and temporary-structure checks only. Private accepted-package rehearsal requires separate local configuration.'};
  }
- evidence.runnerVersion='save-review-readonly-14';evidence.revision=revision;evidence.generatedAt=new Date().toISOString();
+ evidence.runnerVersion='selected-playground-check-15';evidence.companionVersion=chrome.runtime.getManifest().version;evidence.revision=revision;evidence.generatedAt=new Date().toISOString();
  if(evidence.status==='passed-and-restored'&&evidence.levels?.status==='passed-and-restored'){
   status.textContent='Reading the saved lesson again and preparing the proposed save. No write will be sent.';
   try{
@@ -138,7 +139,7 @@ try{
  }
 
  try{
-  localStorage.setItem('native-verification-latest',JSON.stringify(evidence));
+  localStorage.setItem(latestKey,JSON.stringify(evidence));
   const state=JSON.parse(localStorage.getItem('native-scalar-staging-v1')||'{}');
   const capture=evidence.levels?.finalCapture||evidence.structure?.finalCapture||evidence.finalCapture;
   if(capture){state.capture=capture;state.snapshot=normalizeNativeCapture(capture);}
@@ -164,7 +165,7 @@ try{
  evidence={schemaVersion:1,kind:'native-automated-verification',status:'blocked',restored:false,saved:false,error:error.message,
   initialCapture:previous?.initialCapture,plan:previous?.plan,structure:previous?.structure,levels:previous?.levels,targetState,runnerVersion:'native-accepted-levels-10',revision,generatedAt:new Date().toISOString()};
  if(bridge)try{evidence.cleanupCapture=await bridge({action:'read'});}catch{}
- try{localStorage.setItem('native-verification-latest',JSON.stringify(evidence));}catch{}
+ try{localStorage.setItem(latestKey,JSON.stringify(evidence));}catch{}
  report.textContent=JSON.stringify({status:evidence.status,error:evidence.error,restored:false,saved:false},null,2);
  download.hidden=false;saveReport();watchUpdates();
 }

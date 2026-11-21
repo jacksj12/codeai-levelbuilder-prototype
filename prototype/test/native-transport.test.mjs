@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createNativeTransport} from '../browser-fill/native-transport.mjs';
-import {prepareNativeTarget} from '../browser-fill/native-target.mjs';
+import {prepareNativeTarget,verificationDestination} from '../browser-fill/native-target.mjs';
 
 test('native transport preserves nullable fields and gives each injection a deadline',async()=>{
  let received;
@@ -34,4 +34,10 @@ test('automatic target activation refuses unknown and discarded tabs',async()=>{
 test('automatic target activation selects only the assigned existing editor without reloading',async()=>{
  let change;const tabs={get:async()=>({url:'https://levelbuilder-studio.code.org/lessons/8898985/edit',frozen:true,discarded:false}),update:async(id,options)=>{change={id,options};}};
  const state=await prepareNativeTarget(tabs,42);assert.equal(state.frozen,true);assert.deepEqual(change,{id:42,options:{active:true}});
+});
+
+test('automatic verification accepts the current owned playground without expanding to official lessons',async()=>{
+ const url='https://levelbuilder-studio.code.org/lessons/8898984/edit';assert.deepEqual(verificationDestination(url),{id:8898984,url});
+ for(const value of ['https://levelbuilder-studio.code.org/lessons/123/edit',url+'?other=1','https://example.com/lessons/8898984/edit'])assert.equal(verificationDestination(value),null);
+ let activated=false;await prepareNativeTarget({get:async()=>({url}),update:async()=>{activated=true;}},1);assert.equal(activated,true);
 });
