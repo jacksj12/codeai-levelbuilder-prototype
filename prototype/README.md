@@ -13,7 +13,7 @@ npm start
 
 Open [Lesson workspace](http://127.0.0.1:4316) or [Transfer demo](http://127.0.0.1:4316/workflow.html). If occupied, set `$env:PORT='43834'` before `npm start` and use the printed address. Verify that startup serves this saved checkout's `prototype/dist`. The separate Documents/ChatGPT project folder is an older backup, not the build destination. Browser storage is separate for each hostname and port.
 
-From `prototype`, run `node --test --test-isolation=none`. The latest delivery check passes **184 tests**. Six controller checks exercise the real transfer-screen handlers with a minimal DOM: broader preparation/save/reload/recheck, storage failure, failed durable attempt storage, reload after storage fails following dispatch, confirmed read-only baseline export for a selected destination, and real serialized saved-reader errors before any capture. A package check resolves the local dependency graph from the extension/demo entry points and checks the manifest and unarmed default mode. They are controller simulations, not browser or live acceptance.
+From `prototype`, run `node --test --test-isolation=none`. The latest delivery check passes **227 tests**. Six controller checks exercise the real transfer-screen handlers with a minimal DOM: broader preparation/save/reload/recheck, storage failure, failed durable attempt storage, reload after storage fails following dispatch, confirmed read-only baseline export for a selected destination, and real serialized saved-reader errors before any capture. A package check resolves the local dependency graph from the extension/demo entry points and checks the manifest and unarmed default mode. They are controller simulations, not browser or live acceptance.
 
 ## First use: review and export
 
@@ -104,3 +104,6 @@ Presentation files replace only slides; brief files update their recognized fiel
 In the updated companion popup, **Import this Google Slides deck** reads an already-open, signed-in Slides tab with the existing active-tab permission, then opens the workspace's source review. It changes no source content. If Google disallows the export, use File → Download → Microsoft PowerPoint in Slides and import that file. Notion uses Markdown or complete blocks exports; this release does not include standalone Notion OAuth sign-in. Connected Notion tooling was used to verify the actual source format, not embedded as an application backend.
 
 Validation: 212 local tests passed; the actual source deck (15 slides / 14 notes) and connected Notion brief were imported together in the browser. Installed-extension execution remains unverified because the browser policy blocks extension pages. No new native save or cleanup was performed in this release.
+
+
+Saved destination revision comparison is available in Revision review. Link a clean saved report matching the approved local baseline, then import later reports. Conflicts and deletion decisions remain local, and this feature makes no remote writes. Eight regression tests cover independent edits, conflicts, repeat imports, source refresh, deletion, identity stability, mismatched destinations, and unmanaged settings.

@@ -37,3 +37,8 @@ Release **0.11.0** adds native-editor save dispatch, field-level source revision
 The latest accepted live result is a user-approved **native UI save** of the complete AI Lab proposal, independently read back with zero mismatches. It contains three activities, ten sections, six callouts and four original level links, three marked assessment. This does not establish automatic end-to-end acceptance of the reusable companion or live cleanup. Preserve that accepted lesson; no further save or cleanup is authorized by these instructions.
 
 The source fixture includes curriculum content and project-specific references. Keep the repository and downloaded reports private. Official sources remain read-only. Local approval does not authorize a remote save. No license to redistribute third-party curriculum is granted here.
+
+
+### Saved destination revision review
+
+Revision review can link a native saved report to an exactly matching approved local baseline, then compare newer saved reports by native activity and section identities. Independent changes merge into the local draft; conflicting edits, cleared text, and deleted activities require decisions. Repeating a report retains prior decisions. Source revision tracking remains independent. This workflow reads downloaded evidence only and never stages or saves the destination. Saved settings outside the draft are reported and preserved. Reports must be a clean baseline capture or an independently verified successful save; mismatched baselines and destinations are refused.

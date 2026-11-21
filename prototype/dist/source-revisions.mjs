@@ -21,9 +21,10 @@ function put(state,c,value){
  }else throw Error('Unknown revision decision.');
  p.duration=p.activities.reduce((n,a)=>n+a.duration,0);
 }
-export function mergeSources(state,source){
+export function mergeSources(state,source){const result=mergeGeneratedRevision(state,generate(source));result.state.source=clone(source);return result;}
+export function mergeGeneratedRevision(state,next){
  if(state.conflicts.length)throw Error('Resolve the current source conflicts before importing another revision.');
- const next=generate(source),out=clone(state),base=state.generated,removedGroups=new Set(base.activities.filter(a=>!next.activities.some(b=>b.id===a.id)).map(a=>a.id));
+ const out=clone(state),base=state.generated,removedGroups=new Set(base.activities.filter(a=>!next.activities.some(b=>b.id===a.id)).map(a=>a.id));
  let updates=0;const conflicts=[];
  function merge(c,old,current,incoming){
   // Clearing authored text is a deletion, even when represented by an empty string.
@@ -64,7 +65,7 @@ export function mergeSources(state,source){
    if(!same(selected,current)){put(out,{kind:'order',key},selected);updates++;}
   }
  }
- out.source=clone(source);out.generated=clone(next);out.draft.warnings=clone(next.warnings);out.draft.duration=out.draft.activities.reduce((n,a)=>n+a.duration,0);out.conflicts=conflicts;
+ out.generated=clone(next);out.draft.warnings=clone(next.warnings);out.draft.duration=out.draft.activities.reduce((n,a)=>n+a.duration,0);out.conflicts=conflicts;
  if(updates||conflicts.length){out.approved=false;out.reviewed=[];}
  if(structureProblems(out.draft).length)throw Error('Source revision would create orphaned or duplicate records. Original draft retained.');
  return {state:out,updates,conflicts:conflicts.length};
