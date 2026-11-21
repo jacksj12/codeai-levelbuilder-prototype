@@ -1,3 +1,4 @@
+import {readTransferRecord,writeTransferRecord} from '../dist/transfer-storage.mjs';
 import {verificationDestination} from './native-target.mjs';
 import {sourcePageExport} from './source-page-export.mjs';
 import {unzipOffice,presentationParts} from '../dist/source-imports.mjs';
@@ -9,11 +10,11 @@ import {buildTransferPlan,packageProblems,clone,digest,canonical} from '../dist/
 const $=id=>document.getElementById(id);
 $('open-transfer').onclick=async()=>{const [tab]=await chrome.tabs.query({active:true,currentWindow:true});if(tab?.id)await chrome.tabs.create({url:chrome.runtime.getURL('browser-fill/workflow.html')+'#'+tab.id});};
 let state={decisions:{},history:[]},plan=null,running=false,controller;
-try{state=JSON.parse(localStorage.getItem('native-scalar-staging-v1'))||state;}catch{}
+try{state=readTransferRecord(localStorage,'native-scalar-staging-v1')||state;}catch{}
 state.decisions??={};state.history??=[];
 let storageWarning='';
 function notice(message){$('status').textContent=[message,storageWarning].filter(Boolean).join(' ');}
-function persist(){try{localStorage.setItem('native-scalar-staging-v1',JSON.stringify(state));storageWarning='';}catch{storageWarning='Extension storage is unavailable. Download the current evidence before closing this popup.';notice('');}}
+function persist(){try{writeTransferRecord(localStorage,'native-scalar-staging-v1',state);storageWarning='';}catch{storageWarning='Extension storage is unavailable. Download the current evidence before closing this popup.';notice('');}}
 function node(tag,text,parent){const element=document.createElement(tag);element.textContent=text;parent.append(element);return element;}
 const createEditorTransport=()=>createNativeTransport(async encoded=>{
  const [active]=await chrome.tabs.query({active:true,currentWindow:true});

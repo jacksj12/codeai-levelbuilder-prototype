@@ -12,3 +12,10 @@ test('compact evidence refuses circular references and retains special keys safe
  assert.throws(()=>decodeTransferRecord('lesson-evidence-v1:'+JSON.stringify({nodes:[{a:[{r:0}]}],root:{r:0}})),/reference/);
  const original=JSON.parse('{"__proto__":{"polluted":true},"constructor":"value"}'),decoded=decodeTransferRecord(encodeTransferRecord(original));assert.deepEqual(decoded,original);assert.equal({}.polluted,undefined);
 });
+
+test('quota recovery compacts legacy evidence losslessly without deleting reports or retrying a dispatch',()=>{
+ const original={before:{text:'teaching '.repeat(1000)},after:{text:'teaching '.repeat(1000)}},raw=JSON.stringify(original),data=new Map([['native-verification-latest-8898984',raw],['unrelated','keep']]);let quota=raw.length+1000;
+ const storage={get length(){return data.size;},key:i=>[...data.keys()][i],getItem:k=>data.get(k)??null,setItem(k,v){const total=[...data].reduce((n,[key,value])=>n+(key===k?0:value.length),0)+v.length;if(total>quota)throw Error('quota');data.set(k,v);}};
+ const receipt={attempted:true,restorePoint:original};writeTransferRecord(storage,'native-approved-save-current',receipt);
+ assert.deepEqual(readTransferRecord(storage,'native-verification-latest-8898984'),original);assert.deepEqual(readTransferRecord(storage,'native-approved-save-current'),receipt);assert.equal(data.get('unrelated'),'keep');assert.equal(data.size,3);
+});

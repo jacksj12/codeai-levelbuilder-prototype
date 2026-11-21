@@ -2,7 +2,7 @@ import {saveDiagnostics} from './save-diagnostics.mjs';
 import {reviewedLevelGroups} from './reviewed-structure.mjs';
 import {prepareCleanup,approveCleanup,executeCleanup} from './test-link-cleanup.mjs';
 import {reviewWindow} from './transfer-status.mjs';
-import {readTransferRecord,writeTransferRecord} from './transfer-storage.mjs';
+import {readTransferRecord,writeTransferRecord,compactLegacyEvidence} from './transfer-storage.mjs';
 import {clone} from './transfer-core.mjs';
 import {selectDestination} from './destination.mjs';
 import {readTransferBaseline,prepareTransfer,preparePreservationTest,approveTransfer,executeTransfer} from './reusable-transfer.mjs';
@@ -237,6 +237,10 @@ $('next-transfer').onclick=()=>{const next=new URL(location.href);next.searchPar
 
 if(native){$('demo-controls').hidden=true;$('native-controls').hidden=false;$('workspace-link').hidden=true;$('mode-note').textContent='Live companion · only use an owned practice lesson. Preparation temporarily stages and restores supported teaching fields and links. Saving requires your separate exact-request approval.';try{const tab=await chrome.tabs.get(state.tabId);$('destination').value=state.destination?.url||tab.url||'';}catch{status('Open this screen from the native companion on your practice editor.');}$('practice').checked=state.practiceConfirmed===true;}
 else{$('save').textContent='Approve and simulate save';$('approve').parentElement.lastChild.textContent=' I reviewed these exact changes and approve the simulated save to this demo destination.';}
+if(!startupError&&native){try{
+ state.storageCompaction={charactersReclaimed:compactLegacyEvidence(localStorage),recordsDeleted:0};
+ if(state.job&&!state.receipt){const retained=readTransferRecord(localStorage,'native-approved-save-'+await saveRequestDigest(state.job.review));if(retained?.attempted){state.receipt=retained;state.recoveredDurableAttempt=true;}}
+ }catch(error){startupError=error.message;}}
 try{if(!startupError){render();if(state.cleanupReceipt?.attempted)status('Cleanup run restored. Recheck cleanup to read the current saved result without resending.');else if(state.receipt)status('Retained run restored. You can check the saved result without sending again.');}}catch{startupError='Saved transfer data is incomplete or incompatible. The original data has been retained. Transfer is paused; preserve this run before recovery.';}
 if(startupError){status(startupError);$('status').setAttribute('role','alert');for(const control of document.querySelectorAll('button,input'))control.disabled=true;}
 if(native){if(startupError)$('baseline-status').textContent=startupError;else if(!state.job&&!state.receipt&&!state.needsRecovery)$('baseline-status').textContent='Companion '+chrome.runtime.getManifest().version+' · '+(state.preparationError||'Confirm the practice lesson, then read its baseline. No package is needed.');}

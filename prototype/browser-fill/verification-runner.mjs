@@ -1,3 +1,4 @@
+import {readTransferRecord,writeTransferRecord} from '../dist/transfer-storage.mjs';
 import {reviewedLevelGroups} from '../dist/reviewed-structure.mjs';
 import {buildSaveReview} from '../dist/save-review.mjs';
 import {runApprovedSave} from '../dist/approved-save.mjs';
@@ -41,7 +42,7 @@ try{
  const serialized=localStorage.getItem(key);if(!serialized)throw Error('Open this check from the companion on your playground editor.');
  const run=JSON.parse(serialized);
  const selected=verificationDestination((await chrome.tabs.get(run.tabId)).url);if(canonical(selected)!==canonical(run.destination||null))throw Error('The selected verification destination changed. No checks were started.');
- latestKey='native-verification-latest-'+(selected?.id||8898985);previous=JSON.parse(localStorage.getItem(latestKey)||'null');
+ latestKey='native-verification-latest-'+(selected?.id||8898985);previous=readTransferRecord(localStorage,latestKey);
  const owner=localStorage.getItem('native-verification-owner');
  if(owner&&owner!==token){status.textContent='Another verification tab owns this editor. No checks were started here.';return;}
  localStorage.setItem('native-verification-owner',token);
@@ -78,19 +79,19 @@ try{
     return findUnitLevelConflicts(review,usages);
    },
    recover:async()=>{
-    const point=JSON.parse(localStorage.getItem('native-approved-save-staging')||'null');
+    const point=readTransferRecord(localStorage,'native-approved-save-staging');
     if(!point?.plan||!point.initialCapture)throw Error('No owned unsaved staging checkpoint is available. Outside edits were preserved.');
     await recoverNativeLevelCheck(bridge,point);
    },
-   stage:()=>runAcceptedNativeRehearsal(bridge,pkg,{leaveStaged:true,onProgress:message=>{status.textContent=message;},onCheckpoint:async point=>{localStorage.setItem('native-approved-save-staging',JSON.stringify(point));}}),
-   loadReceipt:async key=>JSON.parse(localStorage.getItem('native-approved-save-'+key)||'null'),
-   persist:async(key,value)=>{localStorage.setItem('native-approved-save-'+key,JSON.stringify(value));if(value.attempted){continueUpdates=false;continuation.hidden=true;}},
-   checkpoint:async point=>{localStorage.setItem('native-approved-save-checkpoint',JSON.stringify(point));if(point.stage)localStorage.setItem('native-approved-save-staging',JSON.stringify(point.stage));},
+   stage:()=>runAcceptedNativeRehearsal(bridge,pkg,{leaveStaged:true,onProgress:message=>{status.textContent=message;},onCheckpoint:async point=>{writeTransferRecord(localStorage,'native-approved-save-staging',point);}}),
+   loadReceipt:async key=>readTransferRecord(localStorage,'native-approved-save-'+key),
+   persist:async(key,value)=>{writeTransferRecord(localStorage,'native-approved-save-'+key,value);if(value.attempted){continueUpdates=false;continuation.hidden=true;}},
+   checkpoint:async point=>{writeTransferRecord(localStorage,'native-approved-save-checkpoint',point);if(point.stage)writeTransferRecord(localStorage,'native-approved-save-staging',point.stage);},
    onProgress:message=>{status.textContent=message;}
   });
   continueUpdates=false;continuation.hidden=true;
   evidence.revision=revision;
-  localStorage.setItem('native-approved-save-latest',JSON.stringify(evidence));
+  writeTransferRecord(localStorage,'native-approved-save-latest',evidence);
   status.textContent=evidence.status==='saved-and-verified'?'Approved save completed. Four level links and three assessment flags verified. All other saved content preserved. Report downloaded.':evidence.status==='save-rejected-unchanged'?'The server rejected the save. Saved lesson is unchanged. No retry will be sent. Report downloaded.':'Save not confirmed. No automatic retry will be sent. Report downloaded.';
   report.textContent=JSON.stringify({status:evidence.status,verification:evidence.verification,dispatch:evidence.dispatch,saveRetried:false},null,2);
   download.hidden=false;saveReport();return;
@@ -112,17 +113,17 @@ try{
   status.textContent='Recovering the earlier temporary verification changes before starting new checks.';
   recovery=await recoverNativeVerification(bridge,previous);
  }
- evidence=await runNativeVerification(bridge,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{localStorage.setItem(latestKey,JSON.stringify(checkpoint));}});
+ evidence=await runNativeVerification(bridge,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{writeTransferRecord(localStorage,latestKey,checkpoint);}});
  evidence.runnerVersion='native-accepted-levels-10';evidence.targetState=targetState;evidence.revision=revision;evidence.generatedAt=new Date().toISOString();if(recovery)evidence.recovery=recovery;if(structuralRecovery)evidence.structuralRecovery=structuralRecovery;if(levelRecovery)evidence.levelRecovery=levelRecovery;
  if(evidence.status==='passed-and-restored'){
-  evidence.structure=await runNativeStructureVerification(bridge,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{localStorage.setItem(latestKey,JSON.stringify({...evidence,restored:false,structure:checkpoint}));}});
+  evidence.structure=await runNativeStructureVerification(bridge,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{writeTransferRecord(localStorage,latestKey,{...evidence,restored:false,structure:checkpoint});}});
   if(evidence.structure.status!=='passed-and-restored'){evidence.status='blocked';evidence.restored=evidence.structure.restored;evidence.error=evidence.structure.error;evidence.restorationError=evidence.structure.restorationError;}
  }
  if(evidence.status==='passed-and-restored'&&!revision.startsWith('verification-release-')){
   const response=await fetch(chrome.runtime.getURL('browser-fill/accepted-rehearsal.json'),{cache:'no-store'});
   if(!response.ok)throw Error('The locally approved rehearsal package is unavailable.');
   const pkg=await response.json();
-  evidence.levels=await runAcceptedNativeRehearsal(bridge,pkg,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{localStorage.setItem(latestKey,JSON.stringify({...evidence,restored:false,levels:checkpoint}));}});
+  evidence.levels=await runAcceptedNativeRehearsal(bridge,pkg,{onProgress:message=>{status.textContent=message;},onCheckpoint:checkpoint=>{writeTransferRecord(localStorage,latestKey,{...evidence,restored:false,levels:checkpoint});}});
   if(evidence.levels.status!=='passed-and-restored'){evidence.status='blocked';evidence.restored=evidence.levels.restored;evidence.error=evidence.levels.error;evidence.restorationError=evidence.levels.restorationError;}
  }
  if(revision.startsWith('verification-release-'))evidence.acceptedPackageCheck={status:'not-configured',reason:'The release default runs field and temporary-structure checks only. Private accepted-package rehearsal requires separate local configuration.'};
@@ -139,13 +140,13 @@ try{
  }
 
  try{
-  localStorage.setItem(latestKey,JSON.stringify(evidence));
-  const state=JSON.parse(localStorage.getItem('native-scalar-staging-v1')||'{}');
+  writeTransferRecord(localStorage,latestKey,evidence);
+  const state=(readTransferRecord(localStorage,'native-scalar-staging-v1')||{});
   const capture=evidence.levels?.finalCapture||evidence.structure?.finalCapture||evidence.finalCapture;
   if(capture){state.capture=capture;state.snapshot=normalizeNativeCapture(capture);}
   delete state.pkg;delete state.journal;state.decisions={};
   state.report={status:evidence.status,restored:evidence.restored,saved:false};
-  localStorage.setItem('native-scalar-staging-v1',JSON.stringify(state));
+  writeTransferRecord(localStorage,'native-scalar-staging-v1',state);
  }catch{evidence.storageWarning='Local storage was unavailable; keep the downloaded report.';}
  report.textContent=JSON.stringify({status:evidence.status,fields:evidence.fields?.length||0,restored:evidence.restored,saved:false,structure:evidence.structure?{status:evidence.structure.status,callouts:evidence.structure.callouts,restored:evidence.structure.restored}:null,levels:evidence.levels?{status:evidence.levels.status,counts:evidence.levels.counts,restored:evidence.levels.restored}:null,skipped:evidence.skipped,error:evidence.error,restorationError:evidence.restorationError},null,2);
  status.textContent=evidence.status==='passed-and-restored'?(evidence.saveReview?.status==='ready-for-review'?'Save preview ready. Original values remain restored. No Save performed. Report downloaded.':evidence.saveReview?.status==='blocked'?'Rehearsal passed and restored. Save preview blocked: '+evidence.saveReview.error:'Automatic check passed. All original values restored. No Save performed. Report downloaded.'):'Verification stopped. '+(evidence.error||'')+' '+(evidence.restorationError||(evidence.restored?'Original values restored.':'Restoration was not confirmed.'));
@@ -165,7 +166,7 @@ try{
  evidence={schemaVersion:1,kind:'native-automated-verification',status:'blocked',restored:false,saved:false,error:error.message,
   initialCapture:previous?.initialCapture,plan:previous?.plan,structure:previous?.structure,levels:previous?.levels,targetState,runnerVersion:'native-accepted-levels-10',revision,generatedAt:new Date().toISOString()};
  if(bridge)try{evidence.cleanupCapture=await bridge({action:'read'});}catch{}
- try{localStorage.setItem(latestKey,JSON.stringify(evidence));}catch{}
+ try{writeTransferRecord(localStorage,latestKey,evidence);}catch{}
  report.textContent=JSON.stringify({status:evidence.status,error:evidence.error,restored:false,saved:false},null,2);
  download.hidden=false;saveReport();watchUpdates();
 }

@@ -31,6 +31,18 @@ export function readTransferRecord(storage,key){
  if(raw===null)return null;
  try{const value=decodeTransferRecord(raw);if(!value||typeof value!=='object'||Array.isArray(value))throw Error();return value;}catch{throw Error('Saved transfer evidence could not be read. It has been left untouched. Keep this run open and retain the original browser data before attempting recovery.');}
 }
+export function compactLegacyEvidence(storage){
+ let reclaimed=0;const keys=[];
+ if(!Number.isInteger(storage.length)||typeof storage.key!=='function')return 0;
+ for(let i=0;i<storage.length;i++){const key=storage.key(i);if(key==='native-scalar-staging-v1'||/^native-verification-latest(?:-\d+)?$/.test(key)||key?.startsWith('native-approved-save-')||key?.startsWith('reviewed-transfer-session-'))keys.push(key);}
+ for(const key of keys){const raw=storage.getItem(key);if(!raw||raw.startsWith(PREFIX))continue;
+  let encoded;try{const value=JSON.parse(raw);if(!value||typeof value!=='object')continue;encoded=encodeTransferRecord(value);if(JSON.stringify(decodeTransferRecord(encoded))!==JSON.stringify(value))continue;}catch{continue;}
+  if(encoded.length>=raw.length)continue;
+  // Replace atomically only after an exact round trip; never delete a report or receipt.
+  storage.setItem(key,encoded);reclaimed+=raw.length-encoded.length;
+ }return reclaimed;
+}
 export function writeTransferRecord(storage,key,value){
- try{storage.setItem(key,encodeTransferRecord(value));}catch{throw Error('Transfer evidence could not be saved. Transfer is paused. Free storage space or restore access, then reload this same run. Do not clear browser data or start another save.');}
+ const message='Transfer evidence could not be saved. Transfer is paused. Free storage space or restore access, then reload this same run. Do not clear browser data or start another save.';
+ try{const encoded=encodeTransferRecord(value);try{storage.setItem(key,encoded);}catch(error){if(!compactLegacyEvidence(storage))throw error;storage.setItem(key,encoded);}}catch{throw Error(message);}
 }
