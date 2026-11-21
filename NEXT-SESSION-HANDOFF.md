@@ -1,10 +1,27 @@
-# Notion OAuth and publishing handoff implemented — 0.13.0, live authorization pending
-+
-+See prototype/NOTION-AND-PUBLISHING.md. Local server at http://localhost:4316 supports server-side OAuth, session-bound one-use state, refresh, disconnect, complete read-only Notion imports and portable brief exports. New publishing screen performs baseline preflight, exports schema-v2 destination-bound packages, and independently verifies native receipts. Companion preparation enforces baseline/package binding before staging; older companions reject schema v2. Supported native scope is unchanged; shared collections remain blocked.
-+
-+255 tests pass. Browser publishing flow verified with a synthetic package/baseline/receipt, including reload and no-resend controls. Actual Notion OAuth has no configured credentials yet. Chrome tab 630151567 is on the signed-in Notion developer portal with the New connection form prepared: Lesson Studio, OAuth, redirect http://localhost:4316/api/notion/callback. Portal rejected numeric IP redirect. Create connection accepts Developer Terms and creates credentials; account-holder click is required. It has NOT been clicked. After the user does so, inspect the actual result, configure read-only capabilities and use the app's client credentials privately on the local server, then request the final page-access authorization if needed. Never print credentials or commit .env. No live lesson edits, staging, saves or cleanup occurred; preserve accepted 8898984 and all four levels. Installed companion remains 0.12.3 until a necessary user reload; source release is 0.13.0.
-+
-+# Ten requested build/test passes completed — release 0.12.4
+# Notion import and fresh live preservation verified — 0.13.0
+
+Current status, November 20, 2026 (fresh check at 2026-11-21 06:38 UTC). This entry supersedes pending setup statements in historical entries below.
+
+## Completed and verified
+
+- The account holder created LevelBuilder AI Workflow Connection, refreshed its client secret, and authorized page access. The local server at http://localhost:4316 completed OAuth and displayed Connected to CodeAI. Read content is enabled; update/insert content and user-information access are disabled. Client credentials are in the ignored prototype/.env, never in Git; session tokens remain server-side in memory. Restarting the server requires signing in again.
+- Live import succeeded for **L16: AI Lab**, page 3f5e7b522e8480f98051c1f9693875bd, in AP CSP Development Tracker. It returned teacher/student overviews, three objectives, preparation, three resources with correct audiences, and empty vocabulary. The similarly named progression-planning summary is not the complete brief. The Link to levels heading remains an explicit unmapped-heading warning; existing four-level mappings were retained.
+- Verified download of the portable brief and handoff into source review. Conflicts were resolved by preserving existing content. The final local draft uses the saved resource names/URLs and saved wording/formatting, avoiding duplicate resources and unnecessary text changes. It is approved locally. Its existing 14-slide source snapshot was retained; the separately tested 15-slide export was not substituted or remapped during this brief import.
+- Final exported package: private Downloads/lesson-review-package (4).json. Production preparePublication, using independently validated native report reviewed-transfer-98fc070f-3ce9-47c4-9d5f-b3e948ad5a0d.json, returned already-matches, zero changes, zero blockers, zero pending checks, and four existing levels. No new publication save was necessary or performed.
+- A NEW native editor tab loaded https://levelbuilder-studio.code.org/lessons/8898984/edit from the live service. Visible DOM comparison found all 15 text areas exactly equal to saved evidence; resources, objectives, callout content, all four level names and the final three assessment flags matched. No fields were edited and no Save control was clicked. This is fresh visible-editor verification, NOT a new full serialized companion baseline/receipt or a new schema-v2 live-save acceptance. The prior full native receipt remains the evidence for record IDs and complete serialized preservation.
+- Private fresh-live-verification.json, publication-preflight-private.json, downloaded packages and screenshots remain outside Git in the ChatGPT evidence workspace/Downloads. No credentials or private lesson captures belong in commits.
+
+## Validation and remaining boundaries
+
+Full suite: 255 passed, zero failures. Focused Notion/publishing tests also passed, including matching/no-save completion, stale binding rejection, unsupported collection rejection, simulated single dispatch, independent receipt verification and no resend. See prototype/NOTION-AND-PUBLISHING.md.
+
+The current lesson verification is complete; do not manufacture another save to produce a receipt. The final no-change preflight was run locally with the production module. The earlier browser publication run retains its older blocked package; do not mistake it for the final artifact or claim that run received a completed receipt.
+
+Installed companion was last verified at 0.12.3; source release is 0.13.0. A future changed schema-v2 publication needs companion 0.13.0+, a fresh complete companion baseline, exact review and independent receipt verification. Browser policy blocks extension-page control; Chrome automatic local-file selection also requires file access, so the user selected the baseline report manually. No reload is needed for this completed no-save verification.
+
+Shared-resource creation, objective/vocabulary collection mutations, populated-progression replacement, arbitrary deletion, asset uploads and general production publishing remain unsupported and blocked. AI interpretation and cross-curriculum validation are outside this completed scope. The historical direct-request HTTP-200/no-op cause remains unknown; native save recovery was previously verified. Preserve lesson 8898984, all content and original levels 104255/104271/104272/104273.
+
+# Ten requested build/test passes completed — release 0.12.4
 
 See prototype/TEN-PASS-VALIDATION.md for all ten passes, 241 passing tests, real import checks and exact acceptance boundaries. Source imports and destination revisions are hardened; no new live saves or cleanup. The live lesson and four original levels were untouched. The retained successful receipt passed offline revalidation; browser imported the actual deck and brief in a separate local workspace. Local changes are ready; installed companion remains the previously accepted 0.12.3 until a later necessary reload. No user click was needed for these ten passes.
 

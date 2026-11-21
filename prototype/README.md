@@ -1,8 +1,8 @@
 # Current implementation — release 0.13.0
-+
-+Notion OAuth and the supported practice-publishing handoff are implemented and locally validated with **255 passing tests**. Live Notion sign-in awaits the prepared app registration and account-holder authorization. See [NOTION-AND-PUBLISHING.md](NOTION-AND-PUBLISHING.md) for setup, verified behavior and remaining publishing limitations. Run `npm start` and use `http://localhost:4316`. No accepted live lesson content was changed. Earlier release notes below are historical.
-+
-+# Current validation — release 0.12.4
+
+Notion OAuth and the supported practice-publishing handoff are implemented with **255 passing tests**. Live Notion sign-in, full brief import, and fresh visible-editor preservation checks passed. The final approved package matches the verified saved lesson: no additional save is required. See [NOTION-AND-PUBLISHING.md](NOTION-AND-PUBLISHING.md) for evidence and limits. Run `npm start` at `http://localhost:4316`. Earlier release notes below are historical.
+
+# Historical validation — release 0.12.4
 
 The ten requested build/test passes are complete: **241 tests pass**. Read [TEN-PASS-VALIDATION.md](TEN-PASS-VALIDATION.md) for changes, real import checks and remaining scope. The installed 0.12.3 companion unchanged-save workflow previously passed with all four levels and existing content preserved. This release makes local import/revision changes only; no additional live save or cleanup was performed. Historical notes below describe earlier states.
 
@@ -75,7 +75,7 @@ The latest accepted live result is the user's approved **native UI save** on Nov
 
 The reusable companion's **automatic complete preparation/save path remains unverified end to end on the live site**. Its expanded teaching/structural path has regression, simulation and native-shaped fixture evidence; the native UI save is separate acceptance. **Live receipt-owned cleanup remains unaccepted.** Preserve the accepted lesson; no new live save or cleanup is authorized for delivery testing.
 
-Current source import and destination-aware revision support is described below and in TEN-PASS-VALIDATION.md. Standalone Notion OAuth, general publishing, AI interpretation, shared collections/assets and cross-curriculum validation remain unfinished. Tests are engineering checks, not independent curriculum signoff. Downloaded reports contain private source/destination content and restore evidence; keep them outside Git.
+Current source import and destination-aware revision support is described below and in TEN-PASS-VALIDATION.md. General production publishing, AI interpretation, shared collections/assets and cross-curriculum validation remain unfinished; standalone Notion OAuth is now live-verified. Tests are engineering checks, not independent curriculum signoff. Downloaded reports contain private source/destination content and restore evidence; keep them outside Git.
 
 See the newest entry in [NEXT-SESSION-HANDOFF.md](../NEXT-SESSION-HANDOFF.md) for current state. Dated [activity](ACTIVITY-TRANSFER-ACCEPTANCE.md), [broader transfer](BROADER-TRANSFER-ACCEPTANCE.md), [teaching](TEACHING-TRANSFER-ACCEPTANCE.md), [native](NATIVE-SCALAR-ACCEPTANCE.md) and other acceptance notes retain historical evidence; their earlier pending-status statements are superseded by that handoff.
 
