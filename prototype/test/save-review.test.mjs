@@ -98,6 +98,15 @@ test('approved save checkpoints before dispatch and verifies independently, then
  const second=await runApprovedSave(h.job,h.dependencies);assert.equal(second.status,'saved-and-verified');assert.equal(h.sendCount,1);
 });
 
+test('HTTP 200 with unchanged saved baseline stays unconfirmed and readback-only across reloads',async()=>{
+ const h=await approvedHarness();let sends=0;
+ h.dependencies.send=async()=>{sends++;return {ok:true,httpStatus:200,outcome:'response-received',responseSummary:{kind:'lesson-summary',lessonId:h.job.review.destination.id,levelAssociations:0}};};
+ const first=await runApprovedSave(h.job,h.dependencies);
+ assert.equal(first.status,'save-not-confirmed');assert.equal(first.verification.baselineUnchanged,true);assert.equal(first.verification.passed,false);
+ assert.equal(first.dispatch.responseSummary.levelAssociations,0);
+ const again=await runApprovedSave(clone(h.job),h.dependencies);assert.equal(again.status,'save-not-confirmed');assert.equal(sends,1);assert.equal(again.saveRetried,false);
+});
+
 test('missing approval, changed server and outside editor edits block before staging or saving',async()=>{
  for(const scenario of ['approval','saved','editor']){
   const h=await approvedHarness();if(scenario==='approval')h.job.approval.approved=false;if(scenario==='saved')h.changeSaved();if(scenario==='editor')h.changeEditor();
@@ -165,4 +174,12 @@ test('a user-authorized new attempt preserves the rejected receipt and still can
  const bad=await approvedHarness();bad.job.previousAttempt={...rejected,requestDigest:bad.job.approval.approvedRequestDigest,dispatch:{outcome:'unknown'}};Object.assign(bad.job.approval,{attemptId:'unsafe',retryAuthorizedByUser:true});
  await assert.rejects(runApprovedSave(bad.job,bad.dependencies),/confirmed rejected/);assert.equal(bad.sendCount,0);
  delete bad.job.approval.retryAuthorizedByUser;await assert.rejects(runApprovedSave(bad.job,bad.dependencies),/explicit user authorization/);
+});
+
+test('a failed independent read can recover with readback only and clears its stale error',async()=>{
+ const h=await approvedHarness(),read=h.dependencies.readSaved,send=h.dependencies.send;let offline=false;
+ h.dependencies.send=async()=>{const result=await send();offline=true;return result;};
+ h.dependencies.readSaved=async()=>{if(offline)throw Error('Temporary read failure');return read();};
+ const first=await runApprovedSave(h.job,h.dependencies);assert.equal(first.status,'save-not-confirmed');assert.equal(first.readbackError,'Temporary read failure');
+ offline=false;const next=await runApprovedSave(h.job,h.dependencies);assert.equal(next.status,'saved-and-verified');assert.equal(next.readbackError,undefined);assert.equal(h.sendCount,1);
 });

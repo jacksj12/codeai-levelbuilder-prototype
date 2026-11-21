@@ -1,3 +1,117 @@
+# Autonomous continuation — response diagnostics and recovery, November 20, 2026
+
+The user resumed implementation and requested autonomous build/test loops with no input. This entry supersedes the paused-work instruction below; historical receipts and exact-save boundaries remain preserved.
+
+Completed companion 0.10.6 in the working GitHub checkout, not the old ChatGPT backup:
+
+- Finished the previously untested success-response summary. It records only numeric lesson/section/association/level identities, assessment flags and counts. HTML, arbitrary JSON fields, private lesson text and authentication fields are excluded; truncated identity lists are explicitly labeled.
+- Tested the actual serialized native bridge against synthetic DOM and HTTP responses, including valid summaries, malformed JSON, HTML, invalid shapes, bounded lists and rejected-response redaction. These are local transport tests, not live acceptance.
+- Added clear report explanations separating HTTP status, response summary and independent readback. Old attempts without response bodies are explicitly identified; the missing body cannot be recovered retroactively.
+- Added the isolated unconfirmed-save demo. HTTP 200 intentionally leaves saved data unchanged. The real controller retains the receipt, disables another save and cleanup, downloads the report, and rechecks after reload without resending. The regression exercises three repeat readbacks.
+- Fixed stale readback errors remaining after a later successful independent read.
+- Added read-only `prototype/scripts/audit-transfer.mjs`. It validates the retained review digest and recomputes readback verification without network access or evidence changes. Both original attempted-save and recheck reports were audited successfully: unchanged baseline, missing level associations, no verified save.
+
+Validation: full suite **184 passed, zero failed**; targeted transport/save checks passed; Git whitespace check passed. Actual local browser walkthrough on port 43835 completed failure preparation, one simulated save, reload and readback-only recheck. UI reported one simulated send and zero saved associations. Screenshot is in this chat's visualization folder. Existing broader successful workflow, cleanup, preservation, backup and recovery tests remain green. No runtime AI calls, dependency installation, or permission expansion.
+
+Read-only authenticated browser access was available this time. A fresh editor load of lesson 8898984 showed the intended teaching content and no structured level associations. No native field was edited and no save, cleanup, reassignment or retry was made. The original historical attempted run was not modified.
+
+**Remaining blocker:** the cause of the deployed HTTP-200/no-persistence result is still not proven. The original response body was discarded by the earlier version, and current reads cannot recreate it. Public controller source confirms that an update returns lesson JSON but does not explain the observed outcome. Do not label this release a persistence fix or claim the four original levels are now saved. Any new live attempt requires a fresh exact review and separate authorization; this build does not enable retries of the retained attempt. The installed extension has not been reloaded by this session.
+
+Other backlog (direct authenticated source import, shared collection mutation, broad publishing and cross-curriculum acceptance) remains unfinished. The current priority is proving/fixing the failed original-level transfer, not substituting an unrelated teaching-only package.
+
+# PAUSED FOR DIFFERENT MODEL — failed live save, November 20, 2026
+
+This checkpoint supersedes historical instructions below. The user explicitly stopped this model's work and requested a handoff to restart with another model. Only this documentation update is authorized now. No implementation, tests, browser operations, saves, cleanup, retries, commits or pushes are running. No further save is authorized; preserve the attempted receipt and do not click Save again or create a fresh run to evade its readback-only state.
+
+## Intended outcome and live state
+
+The user wants the four ORIGINAL existing levels reassociated into selected practice lesson https://levelbuilder-studio.code.org/lessons/8898984/edit (Julian Playground - ChatGPT), preserving all teaching content, resource/website links, objectives and other settings. The teaching-only engineering-section package was a rejected substitute; do not advance it as the requested outcome. Resources/website links mean URLs; level associations mean structured scriptLevels.
+
+The user reports manually removing the four associations from source https://levelbuilder-studio.code.org/lessons/8898985/edit (Julian Playground - chatGPT(Cleared)) so the originals can be reused in the same unit. No underlying levels, lesson or teaching content was authorized for deletion. Historical source associations were 397404–397407 for levels 104255, 104271, 104272 and 104273. Older companion receipts owned different associations (397256–397259) and must not be replayed or relabeled. Source removal was user-operated, not an agent-performed or independently readback-verified cleanup.
+
+Clean destination baseline reports (2) and (3), basename reviewed-transfer-741370c1-699b-44a0-b61c-229bab6b37b0, agree and pass the baseline guard: three activities, ten sections, three resources, three objectives, zero vocabulary entries and zero saved level associations. Earlier same-basename reports preserve real unsaved-association evidence; they are not the latest baseline.
+
+Exact requested transfer package: C:/Users/Jackson Work/Documents/Lesson Studio Checks/lesson-8898984-original-level-transfer-review.json. Local simulation evidence: lesson-8898984-original-level-transfer-local-check.json in the same directory. It proposes one non-assessment library-chatbot association under Test, Score, and Reflect and three CFU assessments under Check for Understanding. No new activity, section, teaching-field or shared-collection mutation. These private files are outside Git; package approval describes engineering correctness, not human curriculum signoff. Later user approval of the actual live review is recorded below.
+
+## Actual live preparation, approval, attempted save and recheck
+
+All three following reports are in C:/Users/Jackson Work/Downloads/; preserve their complete original contents:
+
+- reviewed-transfer-d108be3f-2539-41fe-8950-8de277a82a43.json: successful LIVE reusable preparation, ready-for-review / passed-and-restored. Exactly four original level associations, three assessments, no other changes. This establishes live preparation/restoration for this scoped package, not a successful save.
+- reviewed-transfer-d108be3f-2539-41fe-8950-8de277a82a43 (1).json: the user explicitly checked approval and clicked Approve and save once. The attempted receipt records HTTP 200, ok=true, outcome=response-received. Independent saved readback for lesson 8898984 contains ZERO scriptLevels, matches the saved baseline, and fails verification. Status save-not-confirmed; attempted=true; baselineUnchanged=true. No successful saved transfer is established.
+- reviewed-transfer-d108be3f-2539-41fe-8950-8de277a82a43 (2).json: a separate user-operated READBACK-ONLY recheck still reports save-not-confirmed, baselineUnchanged=true, zero saved associations, verification false, saveRetried=false, no preparationError. This was not another save. Do not ask the user to repeat an immediate recheck already completed or call this verified success.
+
+The first attempted-save report was reported at 15:54:16 and the readback-only report at 15:55:36 local time. The second unchanged readback rules out only an immediate read-after-write delay through that check; it does not establish the server-side cause.
+
+## Proven findings versus unknowns
+
+Inspection of the retained attempt confirms its approved request and staged capture both contain all four requested original level identities and assessment flags. Endpoint is PUT /lessons/8898984; content type application/json;charset=UTF-8; activities is a JSON-serialized complete array; originalLessonData identifies the selected destination. The payload shape and native transport pattern match the earlier independently successful four-association companion receipt in Documents/Lesson Studio Checks/approved-save-success-receipt.json. Both current saved readbacks are unchanged, so verification correctly refused success and retained the no-resend boundary.
+
+NO ROOT CAUSE OR PERSISTENCE FIX HAS BEEN PROVEN. Static comparison did not establish missing associations in the approved payload, a wrong destination, or a serialization mismatch. Public Code.org source was inspected read-only; deployed behavior may differ. Do not state that caching, server normalization, ignored parameters or another save caused this outcome without evidence.
+
+A proven DIAGNOSTIC GAP is that native-dom-adapter.mjs discarded the successful HTTP response body; the historical receipt therefore cannot show which lesson/associations the HTTP 200 body actually returned. That body cannot be reconstructed retroactively from these reports.
+
+## Checkout and deliberately unfinished edits
+
+Working checkout: C:/Users/Jackson Work/Documents/GitHub/codeai-levelbuilder-prototype. Branch main. Last committed release: 7bb265b (baseline progress/early errors, manifest 0.10.5); preceding local commits a4fdf68 and 8f41284. These delivery commits were NOT pushed. Last fully verified suite: 175 passing checks, zero failures. No newer verified test total exists.
+
+Current uncommitted files, confirmed during this documentation-only handoff:
+- NEXT-SESSION-HANDOFF.md: this checkpoint and intervening evidence notes.
+- prototype/dist/native-dom-adapter.mjs: unfinished, UNTESTED change to retain an allowlisted success-response summary (lesson ID, activity/section counts and association/level identities), excluding arbitrary response content/authentication fields. It is diagnostics, not a proven fix for the missing persisted associations.
+- prototype/test/save-review.test.mjs: new UNRUN regression for HTTP 200 plus unchanged saved baseline remaining unconfirmed/readback-only across repeated execution.
+
+The stop arrived immediately after those two edits. No tests, commits, reloads or live operations were performed afterward. Review these diffs before deciding whether to keep them; do not present them as tested or shipped. Do not accidentally include private packages/reports in a commit. No design exception was persisted: attempts to save the unrelated narrow glow exception failed with Access is denied; no design work is needed for this handoff.
+
+The on-disk manifest is 0.10.5, and that was the last instructed installed release. The installed browser revision was not independently inspected because no CUA browsers/apps were exposed. Do not instruct another reload merely to install the untested edits. If a subsequent model completes and verifies a fix, it must explain exactly which extension reload/new screen is needed while preserving this attempted run and evidence.
+
+## Evidence, access and safest next investigation
+
+Private reports remain in Downloads. Older generated demo/transfer/native-verification JSON reports were ARCHIVED, not deleted, into C:/Users/Jackson Work/Downloads/Lesson Studio report archive - 2026-11-20. Private packages, receipts and restore points remain in C:/Users/Jackson Work/Documents/Lesson Studio Checks/. Historical accepted native-save evidence is in C:/Users/Jackson Work/Documents/ChatGPT/AI Build Day - LevelBuilder Prototype/; that folder is a backup/evidence source, never the build checkout. Do not alter original receipts or disclose credentials/raw authentication content.
+
+Browser access was unavailable via CUA; do not bypass that with shell/CDP/Playwright or browser-profile access. File inspection of user-downloaded reports is available. No remote operation is in flight.
+
+For the next model, begin with READ-ONLY comparison of the actual preparation/attempt/recheck reports and the two untested diffs. Preserve exact originalLessonData, receipts and restore points. Distinguish the real approved request, server response (not retained), and independent readbacks; do not substitute synthetic adapter success for deployed behavior. If the server-response or native network evidence remains necessary, request only the minimal non-secret evidence and make the access limitation explicit. No blind retry, cleanup, reassignment, or new save may be used as a diagnostic. Any later native fallback or new attempt requires a fresh concrete review and separate explicit authorization; the prior UI approval covers the already-attempted request only.
+
+# User priority correction — original level reassociation, not teaching-only test
+
+The user explicitly wants the four original levels reused in selected lesson 8898984 and says to remove their associations from Julian Playground - chatGPT(Cleared), lesson 8898985, to resolve same-unit conflicts. Stop advancing the substitute engineering-section package. This instruction permits preparing removal of precisely four associations; exact fresh-review approval is still required before dispatch. It never authorizes deleting a lesson, underlying levels, teaching content, resource/website links, objectives or other settings.
+
+Read-only inspection of retained native-teaching-saved-baseline.json in the original private backup workspace confirms historical saved associations: 397404 -> 104255 (library chatbot, assessment false), 397405 -> 104271, 397406 -> 104272, 397407 -> 104273 (the three CFUs, assessment true). Source section IDs are 66015858 (Test, Score, and Reflect) and 66015859 (Check for Understanding). These are historical accepted native-save evidence, not a fresh source read. Current source identities and untouched baseline still require confirmation.
+
+Receipt-owned cleanup cannot legitimately use the older companion receipt: its owned IDs 397256–397259 differ. planTestLinkCleanup and the injected save-approved-cleanup guard require a verified companion save receipt, its original empty progressions, and exact unchanged current ownership. The latest native UI save has native verification evidence but no corresponding approved-native-save-receipt. Do not fabricate/relabel a receipt, replay old cleanup, or weaken those guards. Supported fallback is a fresh explicit native UI proposal to unlink these four associations, preserve progression titles and all other records, review before native Save and Keep Editing, then independently read saved data before destination transfer. Native adapter unsaved cleanup itself refuses persisted associations, so it is not an alternate way to remove them.
+
+Minimum user action now (agent browser access remains unavailable): from lesson 8898985 open a fresh reusable screen, confirm its exact practice URL, leave package empty and choose Read baseline only and download report. Do not remove or save anything yet. Inspect that fresh report to prepare the exact four-removal review. After separately approved source removal and verified readback, prepare destination 8898984 with fresh exact-name mappings and unit-use checks, and seek separate approval for that destination save.
+
+Independent preparation completed: C:/Users/Jackson Work/Documents/Lesson Studio Checks/lesson-8898984-original-level-transfer-review.json contains the actual requested four-association proposal, preserving the report (3) destination draft exactly. One non-assessment library-chatbot association goes under Test, Score, and Reflect; three CFU assessments under Check for Understanding. There are no new sections, activities, teaching changes or shared collection changes. Metadata marks source removal and destination save unapproved and fresh source-cleanup/mapping/usage evidence required. Private local-check JSON records preparation/restoration using historical name mappings and synthetic unit preflight; zero saves. Live preparation must wait until source removal is saved and verified. The engineering-section artifact is retained only as unused local evidence, not the requested outcome.
+
+No code or remote change in this step. Full regression remains 175 passing checks from the last code release. Private packages/evidence stay outside Git. This updated handoff is the only uncommitted repository change; no push was performed.
+
+# Terminology clarification for selected practice test
+
+The user meant resources/website links when discussing links visible after reload. This is compatible with report (3): its three resource records and narrative website URLs are saved. Use level associations for structured scriptLevels; do not conflate these with resources/website links. The apparent report/screen disagreement is resolved. The prepared engineering package preserves all three resource records and all existing section bodies and URLs exactly. Local preparation/restoration and preservation checks were repeated after clarifying the synthetic callout wording to level associations. No current-screen claim or live modification was made. The package remains bound to report (3), and live preparation must revalidate the fresh baseline before any staging; no live save is approved.
+
+# Clean selected baseline and scoped engineering package prepared
+
+Fresh selected-destination reports (2) and (3) now pass assertCleanSavedBaseline, have no preparationError, and agree exactly. Both preserve stagingStarted=false. Lesson 8898984: Julian Playground - ChatGPT; three activities (Warm Up / Activity / Wrap Up), ten sections, three resources, three objectives, zero vocabulary entries and zero saved level associations. Earlier report (1) remains evidence of four real unsaved links; it was not overwritten or normalized away.
+
+Private package for user selection: C:/Users/Jackson Work/Documents/Lesson Studio Checks/lesson-8898984-engineering-section-review.json. Companion verification evidence: same directory, lesson-8898984-engineering-section-local-check.json. These files contain private curriculum and remain outside Git. No credentials were copied into a new artifact. Package status approved-locally refers transparently to agent engineering-correctness review only; review/engineeringTest metadata explicitly states no human curriculum signoff, liveSaveApproved=false and cleanupApproved=false. Validation was used unchanged; no bypass or product code change.
+
+The exact proposal appends one untimed remarks section to Wrap Up: Companion engineering check — do not teach. It contains clearly labeled engineering-only guidance and one Teaching Tip. No level links or shared collections are added. Existing front matter, activity titles/timing, ten original sections/callouts, all resource/objective/vocabulary associations and all existing database identities remain preserved. Counts after a later separately approved save would be three activities and eleven sections, with one additional callout and no added levels. Link cleanup does not remove this section; any later live removal needs separate authorization.
+
+Preparation-only local simulation used the actual report (3) saved/native captures and demoAdapter; the real prepareTransfer pipeline staged/restored 19 local adapter actions with zero saves and no approval object. Save review has exactly one section addition, no activity additions, no field changes and no existing-level groups. Removing that one proposed append from its complete activities request exactly matches the saved activities; all six root text fields also match exactly. This does not establish live native preparation or live save acceptance. Existing full regression result remains 175 passing checks; targeted section/reusable checks also passed.
+
+Next user action: from a fresh reusable screen launched from selected lesson 8898984, confirm practice permission, then select lesson-8898984-engineering-section-review.json. Package selection automatically runs live UNSAVED rehearsal and restoration; this preparation is authorized. Inspect that the exact review shows only the one new engineering section and callout. Download the resulting report before any further step. Do not click Approve and save once: exact live-save approval is still absent. Agent browser control remains unavailable. Accepted lesson 8898985 remains untouched; no live save, cleanup or source change was performed.
+
+# Live selected baseline reports inspected — real unsaved links
+
+Two fresh baseline reports for selected practice lesson 8898984 were inspected directly, preserving the originals in Downloads. Both have status baseline-read and stagingStarted=false. Fresh saved data matches the editor bootstrap, and both complete saved snapshots and native captures are identical between the reports. Title: Julian Playground - ChatGPT. The saved lesson contains three activities, ten sections and zero level associations.
+
+The open native editor contains four actual unsaved existing-level additions: one library-chatbot level (104255, not an assessment) under Test, Score, and Reflect; three CFU levels (104271, 104272, 104273, all assessments) under Check for Understanding. All four editor associations lack persisted association IDs. These are real content differences, not null/default or numeric-ID normalization. The only normalized activity-content differences are those two previously empty progressions. The baseline guard is correct and was not weakened. Ownership/intent of these additions is unknown; no reload, staging, save or cleanup was performed.
+
+Safe next action with unavailable agent browser control: preserve the existing editor tab and open https://levelbuilder-studio.code.org/lessons/8898984/edit in a fresh tab; launch a fresh reusable screen from that new tab, confirm practice permission, leave package empty and read baseline. This can inspect saved data without discarding the four unsaved links in the old tab. Do not load the old full four-link package: original levels are already saved on accepted lesson 8898985, so destination-unit usage must be checked before any proposed link transfer. A narrowly reviewed teaching-only proposal can avoid adding those levels, once a clean baseline is confirmed. No live save or cleanup is authorized.
+
+No code change or new test was needed for this finding; the existing 175-check result remains the latest. Private full reports stay outside Git. Accepted lesson 8898985 remains untouched. The latest user download cleanup archived older generated reports rather than deleting evidence; do not treat archived reports as fresh selected-baseline evidence.
+
 # Baseline-button feedback fix — companion 0.10.5
 
 User reported that the package-empty baseline button appeared to do nothing on selected practice lesson 8898984. No fresh live report was available. The exact error from their browser remains unknown; do not claim a live root cause or successful live read.

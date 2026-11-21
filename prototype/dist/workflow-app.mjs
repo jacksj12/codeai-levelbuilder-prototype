@@ -1,3 +1,4 @@
+import {saveDiagnostics} from './save-diagnostics.mjs';
 import {reviewedLevelGroups} from './reviewed-structure.mjs';
 import {prepareCleanup,approveCleanup,executeCleanup} from './test-link-cleanup.mjs';
 import {reviewWindow} from './transfer-status.mjs';
@@ -40,7 +41,7 @@ function fieldDisplay(change,value){
 function render(){
  $('selection').hidden=!state.pkg;$('lesson-name').textContent=state.pkg?.lesson.title||'';
  $('destination-name').textContent=state.destination?(native?'Live practice destination: ':'Synthetic demo destination: ')+state.destination.url:'';
- $('load-demo').hidden=!!state.demo;$('load-teaching-demo').hidden=!!state.demo;$('load-structure-demo').hidden=!!state.demo;$('new-demo').hidden=!state.demo;
+ $('load-failure-demo').hidden=!!state.demo;$('load-demo').hidden=!!state.demo;$('load-teaching-demo').hidden=!!state.demo;$('load-structure-demo').hidden=!!state.demo;$('new-demo').hidden=!state.demo;
  $('prepare').disabled=busy||!!state.receipt||!!state.needsRecovery;
  $('read-baseline').disabled=busy||!!state.job||!!state.receipt||!!state.needsRecovery;
  $('read-baseline').textContent=baselineReading?'Reading baseline…':'Read baseline only and download report';
@@ -53,7 +54,7 @@ function render(){
  $('recover').hidden=!state.needsRecovery||!!state.receipt?.attempted;$('recover').disabled=busy;
  $('download').disabled=!state.job&&!state.checkpoint&&!state.preparationError;
  $('new-demo').disabled=busy;
- for(const id of ['load-demo','load-teaching-demo','load-structure-demo','package-file','destination','practice'])$(id).disabled=busy||native&&!!state.job||!!state.needsRecovery;
+ for(const id of ['load-failure-demo','load-demo','load-teaching-demo','load-structure-demo','package-file','destination','practice'])$(id).disabled=busy||native&&!!state.job||!!state.needsRecovery;
  $('changes').replaceChildren();
  if(state.job){
   const review=state.job.review,levels=reviewedLevelGroups(review).flatMap(c=>c.addLevels),summary=el('div','',$('changes'));summary.className='summary';
@@ -89,6 +90,7 @@ function render(){
   const r=state.receipt,p=el('p',state.cleanupReceipt?.attempted?'Historical transfer receipt. See cleanup below for the current saved result.':r.status==='saved-and-verified'?(native?'Saved and independently verified.':'Simulated save verified. No live lesson was changed.'):r.status,$('report'));if(r.status==='saved-and-verified')p.className='success';
   el('p','Save requests sent: '+(native?'at most one for this approved request':state.demo.sendCount+' simulated')+'. Automatic retries: none.',$('report'));
   if(r.verification?.passed&&!state.cleanupReceipt?.attempted)el('p','All reviewed changes match. Unlisted content and settings are preserved. Restore point retained.',$('report'));
+  for(const message of saveDiagnostics(r).messages)el('p',message,$('report'));
   for(const message of r.verification?.mismatches||[])el('p',message,$('report'));
   if(state.automaticRecheck)el('p','Automatic readback-only recheck completed. No second save was sent.',$('report'));
   if(native&&r.verification?.passed&&!state.cleanupReceipt?.attempted)el('p','Before manual editing, preserve any outside unsaved edits and reopen the lesson to synchronize its saved baseline.',$('report'));
@@ -143,6 +145,10 @@ $('load-teaching-demo').onclick=()=>run(async()=>{
 });
 $('load-structure-demo').onclick=()=>run(async()=>{
  const source=await(await fetch('fixture.json')).json();state.demo=createDemo(source,{teaching:true,structure:true,complete:true});state.pkg=state.demo.pkg;state.destination=state.demo.destination;persist();io=await makeIO();status('Structure demo loaded. Review two new activities, appended sections, a new callout on an existing section, teaching changes, and four total links.');
+});
+$('load-failure-demo').onclick=()=>run(async()=>{
+ if(native)throw Error('Failure simulation is available only in the isolated local demo.');
+ const source=await(await fetch('fixture.json')).json();state.demo=createDemo(source,{saveUnchanged:true});state.pkg=state.demo.pkg;state.destination=state.demo.destination;persist();io=await makeIO();status('Failure demo loaded. A simulated HTTP 200 will leave the saved baseline unchanged. Prepare and approve to test verification and no-resend recovery.');
 });
 $('new-demo').onclick=()=>{const next=new URL(location.href);next.searchParams.delete('run');location.href=next;};
 $('package-file').onchange=()=>run(async()=>{

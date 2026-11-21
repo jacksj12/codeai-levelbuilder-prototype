@@ -13,7 +13,7 @@ npm start
 
 Open [Lesson workspace](http://127.0.0.1:4316) or [Transfer demo](http://127.0.0.1:4316/workflow.html). If occupied, set `$env:PORT='43834'` before `npm start` and use the printed address. Verify that startup serves this saved checkout's `prototype/dist`. The separate Documents/ChatGPT project folder is an older backup, not the build destination. Browser storage is separate for each hostname and port.
 
-From `prototype`, run `node --test --test-isolation=none`. The latest delivery check passes **175 tests**. Six controller checks exercise the real transfer-screen handlers with a minimal DOM: broader preparation/save/reload/recheck, storage failure, failed durable attempt storage, reload after storage fails following dispatch, confirmed read-only baseline export for a selected destination, and real serialized saved-reader errors before any capture. A package check resolves the local dependency graph from the extension/demo entry points and checks the manifest and unarmed default mode. They are controller simulations, not browser or live acceptance.
+From `prototype`, run `node --test --test-isolation=none`. The latest delivery check passes **184 tests**. Six controller checks exercise the real transfer-screen handlers with a minimal DOM: broader preparation/save/reload/recheck, storage failure, failed durable attempt storage, reload after storage fails following dispatch, confirmed read-only baseline export for a selected destination, and real serialized saved-reader errors before any capture. A package check resolves the local dependency graph from the extension/demo entry points and checks the manifest and unarmed default mode. They are controller simulations, not browser or live acceptance.
 
 ## First use: review and export
 
@@ -41,7 +41,7 @@ Optional **Repeat-test cleanup** separately reviews only receipt-owned level-lin
 
 ## Native companion: current scope
 
-See [installation and recovery](browser-fill/README.md). Load the parent `prototype` folder as an unpacked Edge/Chrome extension. The current manifest is **0.10.5**; reload the installed extension after updating the checkout. No extra host permissions were introduced.
+See [installation and recovery](browser-fill/README.md). Load the parent `prototype` folder as an unpacked Edge/Chrome extension. The current manifest is **0.10.6**; reload the installed extension after updating the checkout. No extra host permissions were introduced.
 
 Before choosing a package, confirm the exact practice destination and choose **Read baseline only and download report**. This requires no package, captures fresh saved data and the open editor, and performs no staging, level-usage check or save. Keep the private downloaded report so the test package can be scoped to current content. Stale or unsaved content is reported without overwriting it.
 
@@ -70,3 +70,19 @@ The reusable companion's **automatic complete preparation/save path remains unve
 Direct authenticated source import, complete destination-aware three-way revisions, general publishing, AI interpretation, shared collections/assets and cross-curriculum validation remain unfinished. Tests are engineering checks, not independent curriculum signoff. Downloaded reports contain private source/destination content and restore evidence; keep them outside Git.
 
 See the newest entry in [NEXT-SESSION-HANDOFF.md](../NEXT-SESSION-HANDOFF.md) for current state. Dated [activity](ACTIVITY-TRANSFER-ACCEPTANCE.md), [broader transfer](BROADER-TRANSFER-ACCEPTANCE.md), [teaching](TEACHING-TRANSFER-ACCEPTANCE.md), [native](NATIVE-SCALAR-ACCEPTANCE.md) and other acceptance notes retain historical evidence; their earlier pending-status statements are superseded by that handoff.
+
+## Unconfirmed-save diagnostics (0.10.6)
+
+Choose **Load unconfirmed-save demo** for a repeatable simulated HTTP-200 response that leaves saved data unchanged. Prepare, approve the simulation, reload and recheck: one request remains recorded, the result stays unconfirmed, and cleanup is unavailable. This demo does not contact Level Builder.
+
+New native save attempts retain an allowlisted response summary, separately from independent saved verification. A successful HTTP status is never proof of persistence. Historical attempts without summaries cannot recover the original response retroactively. Readback recovery now clears an earlier read error after a successful fresh check.
+
+Audit an existing downloaded run report offline, without changing it:
+
+```powershell
+node scripts/audit-transfer.mjs "C:/path/to/reviewed-transfer-report.json"
+```
+
+The audit verifies review integrity and recomputes saved readback checks. Output contains diagnostic facts, not the full private lesson or authentication data. It never resends or authorizes a request. Preserve original reports outside Git.
+
+The latest live failure remains unresolved: the selected destination's four level associations were absent after HTTP 200 and remained absent on recheck. Version 0.10.6 closes the diagnostic gap and tests recovery; it is not a proven server-persistence fix. No new live save was performed. The installed companion must eventually load the updated checkout to capture summaries on a separately authorized future attempt; do not restart or resend the retained failed run.

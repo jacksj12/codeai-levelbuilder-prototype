@@ -25,6 +25,7 @@ export async function runApprovedSave(job,{readSaved,readEditor,checkUsage,stage
   const fresh=await readSaved(),result=await verifySavedReadback(receipt.review,fresh.lesson);
   const status=result.passed?'saved-and-verified':result.baselineUnchanged&&receipt.dispatch?.outcome==='rejected'?'save-rejected-unchanged':'save-not-confirmed';
   receipt={...receipt,status,verification:result,readback:fresh.lesson,checkedAt:new Date().toISOString()};
+  delete receipt.readbackError;
   await persist(receiptKey,receipt);return receipt;
  };
  if(receipt?.attempted){onProgress('Checking the earlier save attempt without sending it again.');return verify();}

@@ -136,3 +136,17 @@ test('real serialized saved-reader errors remain visible beside baseline control
   assert.match(state.preparationError,/sign-in/);assert.equal(state.destination.id,8898984);
  }finally{release();ui.restore();}
 });
+
+test('HTTP 200 failure screen retains exact evidence across reload and never resends or offers cleanup',async()=>{
+ const store=storage(),run='controller-unchanged',key='reviewed-transfer-session-'+run;
+ let ui=await load(store,run);
+ try{
+  await ui.get('load-failure-demo').onclick();await ui.get('prepare').onclick();
+  ui.get('approve').checked=true;await ui.get('save').onclick();
+  const state=readTransferRecord(store,key);assert.equal(state.receipt.status,'save-not-confirmed');assert.equal(state.receipt.verification.baselineUnchanged,true);assert.equal(state.demo.sendCount,1);assert.equal(state.cleanupReview,undefined);assert.ok(ui.downloads.length);
+  assert.match(ui.get('report').children.map(n=>n.textContent).join(' '),/proposed changes are not present/);
+  assert.equal(ui.get('save').disabled,true);assert.equal(ui.get('prepare-cleanup').disabled,true);
+ }finally{ui.restore();}
+ ui=await load(store,run);
+ try{for(let i=0;i<3;i++)await ui.get('check').onclick();const state=readTransferRecord(store,key);assert.equal(state.demo.sendCount,1);assert.equal(state.receipt.status,'save-not-confirmed');assert.equal(state.receipt.saveRetried,false);assert.equal(ui.get('save').disabled,true);}finally{ui.restore();}
+});

@@ -116,7 +116,22 @@ export async function nativeEditorBridge(request={action:'read'}){
   // The controller persisted the attempt before this call. Never retry here.
   try{
    const response=await fetch('/lessons/'+destination.id,{method:'PUT',credentials:'same-origin',redirect:'error',headers:{'Content-Type':req.contentType,'Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-Token':csrf},body:req.body});
-   let errorMessage;
+   let errorMessage,responseSummary;
+   if(response.ok){
+    // Keep only allowlisted lesson identities/counts, never an HTML page,
+    // arbitrary JSON, response headers, or authentication/session fields.
+    responseSummary={kind:'unexpected-response'};
+    if((response.headers.get('Content-Type')||'').includes('application/json')){
+     try{
+      const data=await response.json();
+      const numeric=value=>(typeof value==='number'||typeof value==='string'&&/^\d+$/.test(value))&&Number.isSafeInteger(Number(value))&&Number(value)>0?Number(value):null;
+      if(numeric(data?.id)&&Array.isArray(data.activities)&&data.activities.every(a=>a&&Array.isArray(a.activitySections)&&a.activitySections.every(s=>s&&Array.isArray(s.scriptLevels)&&s.scriptLevels.every(sl=>sl&&Array.isArray(sl.levels)&&sl.levels.every(l=>l&&numeric(l.id)))))){
+       const sections=data.activities.flatMap(a=>a.activitySections),links=sections.flatMap(s=>s.scriptLevels.map(sl=>({sectionId:numeric(s.id),associationId:numeric(sl.id),levelIds:sl.levels.slice(0,20).map(l=>numeric(l.id)),assessment:sl.assessment===true})));
+       responseSummary={kind:'lesson-summary',lessonId:numeric(data.id),activities:data.activities.length,sections:sections.length,levelAssociations:links.length,associations:links.slice(0,200),truncated:links.length>200||sections.some(s=>s.scriptLevels.some(sl=>sl.levels.length>20))};
+      }else responseSummary={kind:'unexpected-json'};
+     }catch{responseSummary={kind:'unreadable-json'};}
+    }
+   }
    if(!response.ok){
     const contentType=response.headers.get('Content-Type')||'',text=await response.text();
     if(contentType.includes('text/plain'))errorMessage=text;
@@ -125,7 +140,7 @@ export async function nativeEditorBridge(request={action:'read'}){
     // Retain the explanation, never an HTML page or authentication fields.
     errorMessage=errorMessage.split('\n').filter(line=>!/(csrf|token|secret|password|session|authorization|cookie)/i.test(line)).join('\n').trim().slice(0,2000)||'The server rejected the save.';
    }
-   return {kind:'native-save-result',attempted:true,httpStatus:response.status,ok:response.ok,outcome:response.ok?'response-received':'rejected',...(errorMessage?{errorMessage}:{})};
+   return {kind:'native-save-result',attempted:true,httpStatus:response.status,ok:response.ok,outcome:response.ok?'response-received':'rejected',...(responseSummary?{responseSummary}:{}),...(errorMessage?{errorMessage}:{})};
   }catch(error){return {kind:'native-save-result',attempted:true,outcome:'unknown',error:String(error.message)};}
  }
  if(['lookup-levels','append-progression','clear-owned-progression'].includes(request.action)){

@@ -3,7 +3,7 @@ import {generate,SANDBOX} from './core.mjs';
 import {clone,canonical,digest} from './transfer-core.mjs';
 
 // Synthetic browser/server data. No authentication or remote writer exists here.
-export function createDemo(source,{teaching=false,structure=false,complete=false}={}){
+export function createDemo(source,{teaching=false,structure=false,complete=false,saveUnchanged=false}={}){
  const lesson=generate(source),destination={id:9000001,url:'https://levelbuilder-studio.code.org/lessons/9000001/edit'};
  const tips={'Teaching Tip':'teachingTip','Assessment Opportunity':'assessmentOpportunity','Content Corner':'contentCorner','Discussion Goal':'discussionGoal','Ethics Opportunity':'ethicsOpportunity'};
  const saved={id:destination.id,name:'Demo practice lesson — AI Lab',overview:lesson.frontMatter.teacherOverview,studentOverview:lesson.frontMatter.studentOverview,purpose:lesson.frontMatter.purpose,preparation:lesson.frontMatter.preparation,assessmentOpportunities:lesson.frontMatter.assessmentOpportunities,
@@ -27,7 +27,7 @@ export function createDemo(source,{teaching=false,structure=false,complete=false
  }
  if(complete){saved.activities=saved.activities.slice(0,1);saved.activities[0].activitySections[0].tips=[];capture.saved=clone(saved);capture.live.activities=clone(saved.activities);capture.protection.bootstrap=clone(saved);capture.protection.unmanagedActivities=capture.protection.unmanagedActivities.slice(0,1);capture.protection.unmanagedActivities[0].activitySections[0].tips=[];}
  const names=[...new Set(lesson.sections.flatMap(s=>s.progression?.levels.map(l=>l.key)||[]))];
- return {destination,pkg:{schemaVersion:1,status:'approved-locally',sandbox:SANDBOX,lesson,baseline:clone(lesson),conflicts:[]},server:saved,editor:capture,mappings:names.map((key,i)=>({key,verified:true,destinationLevelId:700+i})),sendCount:0};
+ return {saveUnchanged,destination,pkg:{schemaVersion:1,status:'approved-locally',sandbox:SANDBOX,lesson,baseline:clone(lesson),conflicts:[]},server:saved,editor:capture,mappings:names.map((key,i)=>({key,verified:true,destinationLevelId:700+i})),sendCount:0};
 }
 export function demoAdapter(state,persist){
  return {
@@ -44,6 +44,7 @@ export function demoAdapter(state,persist){
    if(request.action==='save-approved-review'){
     const body=JSON.parse(request.review.request.body);
     if(canonical(JSON.parse(body.originalLessonData))!==canonical(state.server))throw Error('Demo saved baseline changed.');
+    if(state.saveUnchanged){state.sendCount++;persist();return {outcome:'response-received',ok:true,httpStatus:200,simulated:true,responseSummary:{kind:'lesson-summary',lessonId:state.server.id,levelAssociations:state.server.activities.flatMap(a=>a.activitySections).reduce((n,s)=>n+s.scriptLevels.length,0)}};}
     state.server.activities=JSON.parse(body.activities);
     for(const key of ['name','overview','studentOverview','purpose','preparation','assessmentOpportunities'])state.server[key]=body[key];let id=10000,sectionId=20000,activityId=30000;
     for(const a of state.server.activities)if(a.id==null)a.id=++activityId;
