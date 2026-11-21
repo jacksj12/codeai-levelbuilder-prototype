@@ -24,7 +24,7 @@ The **Lesson Studio native companion** lives in the parent `prototype` folder. I
 
 1. Run the local workspace with `npm start` from `prototype` when you need local editing/export or the isolated demo. The unpacked extension itself loads files from this checkout.
 2. In Edge or Chrome extension management, enable Developer mode and choose **Load unpacked**. Select the **parent `prototype` directory**, containing `manifest.json`; do not select `browser-fill` or `api-companion`.
-3. When updating this checkout, reload the installed extension and reopen its transfer screen. Current source version: **0.15.2**. Preserve/download any current evidence first. No private review package or save authorization ships in this clone.
+3. When updating this checkout, reload the installed extension and reopen its transfer screen. Current source version: **0.15.3**. Preserve/download any current evidence first. No private review package or save authorization ships in this clone.
 4. Sign in to Level Builder normally and open the exact owned practice lesson's canonical editor: `https://levelbuilder-studio.code.org/lessons/ID/edit`.
 
 No API key, copied credentials or additional host permissions are needed. Official source lessons remain read-only. A local package approval is not approval to save remotely.
@@ -67,7 +67,7 @@ The latest accepted live result is the explicitly approved **native UI save** of
 
 The popup's **Read / recompare current editor**, **Load review package**, mapping verification and bounded **Stage reviewed changes** use the older unsaved adapter. Their capability checks are narrower than the reusable screen; unsupported actions block the whole legacy batch. A small action limit, resume, duplicate-free reruns and per-operation evidence are retained. Staging itself does not save.
 
-**Run automatic unsaved check and restore** opens a dedicated controller tab for existing fields and temporary section/callout checks. It temporarily changes the editor and restores only owned changes. It is not a read-only demo. The committed automation revision remains `verification-release-25`; no personal approved-save job is bundled or armed. Historical ignored accepted-package/save-job files must not be reused as general save permission. Do not run these tests on the accepted lesson during delivery.
+**Run automatic unsaved check and restore** opens a dedicated controller tab for existing fields and temporary section/callout checks. It temporarily changes the editor and restores only owned changes. It is not a read-only demo. The committed automation revision remains `verification-release-26`; no personal approved-save job is bundled or armed. Historical ignored accepted-package/save-job files must not be reused as general save permission. Do not run these tests on the accepted lesson during delivery.
 
 `transfer.html` is a separate local comparison and synthetic DOM rehearsal tool; it does not publish. Its reports and storage differ from reusable transfer sessions. The API comparison extension under `api-companion` remains GET-only.
 

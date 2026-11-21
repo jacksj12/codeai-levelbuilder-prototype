@@ -1,3 +1,27 @@
+# Shared-record live acceptance passed — November 21, 2026
+
+Companion **0.15.2** completed the user-operated live test on disposable lesson **8898985**, course version **1198**. The user separately authorized creating the exact two named test records, reviewed the association additions after rehearsal, and clicked the separate lesson save control. Agent access to extension pages remained blocked; the user performed the companion actions. No direct writer or policy workaround was used.
+
+## Verified result
+
+- Shared-resource creation/reuse verification returned resource **13894640**, Teacher Handout “Lesson Studio live check 8898985,” with the approved example.org test URL. Vocabulary **3106086** has the same approved word and the temporary-test definition. Both shared records are retained; do not recreate them or assume global deletion ownership.
+- Native association rehearsal passed and restored the entire original capture exactly. Rebuilding the save review from the rehearsal and exact baseline reproduced the review byte-for-byte. The plan contained only the two association appends: no teaching, objective, activity, section, callout, level or settings edits.
+- The user approved the exact native-editor save. Attempt time **00:36:57 Pacific**, independent saved check **00:36:59 Pacific**, November 21. Receipt status **saved-and-verified**, dispatch **native-editor-acknowledged**, verification passed with **zero mismatches**, automatic read-only recheck true, saveRetried false.
+- Two downloaded post-save reports carry the same request digest, attempt timestamp and complete saved readback. Production verifySavedReadback independently revalidated the report locally. Removing only associations to resource 13894640 and vocabulary 3106086 from the complete saved readback reproduces the original baseline exactly, including native IDs and settings. The lesson retains **3 activities, 10 sections, 6 callouts and zero level links**. Protected accepted lesson **8898984** and its four levels were untouched.
+- Private reports, test packages and independently reconstructed verification summaries stay in Downloads/the ChatGPT evidence workspace, outside Git. No cleanup, further save, new record creation or protected-lesson write is authorized by this acceptance entry.
+
+## Source follow-up — 0.15.3
+
+The live 0.15.2 report retained two stale controller fields: the initial missing-mapping preparationError and needsRecovery from the intentionally staged pre-save checkpoint. They do not indicate a failed save; the exact receipt and independent whole-lesson readback establish success. Source 0.15.3 retires these labels only after saved-and-verified, preserving the original error in resolvedPreparationErrors bound to the successful request digest. Old successful runs normalize on load; unconfirmed saves keep recovery/error evidence. Receipt, journal and restore-point evidence remain unchanged.
+
+Full regression: **299 tests passed, zero failures**, including the new actual-controller success/reload and unconfirmed-save test. Source is 0.15.3 with unarmed verification-release-26; installed live acceptance is 0.15.2. No immediate reload or repeat live save is needed. Source follow-up is a local status correction, not another live acceptance claim.
+
+## Remaining scope
+
+The new shared create/reuse → association rehearsal/restoration → separate approved native save → independent readback path now has this live acceptance. This does not complete shared-record editing/deletion with impact review, saved-content/objective removal, replacement/reordering of populated progressions, asset uploads, production destinations or cross-curriculum acceptance. Existing guards remain. Keep the accepted practice content and both test associations as saved unless the user separately requests reviewed changes. Do not invoke native vocabulary Delete.
+
+Earlier entries below retain the repair and historical acceptance evidence.
+
 # Live course-scope reader repair — 0.15.2
 
 The first 0.15.1 shared-record live attempt stopped before record creation: the companion reported “The native lesson course scope is unavailable.” No shared review/creation receipt, lesson save receipt, or recovery requirement exists in the downloaded failure reports. The initial package comparison's missing-resource/vocabulary errors were expected before shared-record mapping; the course-scope error was a reader defect.

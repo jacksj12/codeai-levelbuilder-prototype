@@ -225,3 +225,26 @@ test('shared controller refuses stale baselines and failed durable storage befor
   }finally{ui.restore();}
  }
 });
+
+
+test('verified saves retire stale preparation and recovery labels while retaining history; uncertain saves keep recovery',async()=>{
+ for(const verified of [true,false]){
+  const store=storage(),run='verified-status-'+verified,key='reviewed-transfer-session-'+run;let ui=await load(store,run);
+  try{
+   await ui.get(verified?'load-demo':'load-failure-demo').onclick();await ui.get('prepare').onclick();
+   const staged=readTransferRecord(store,key);staged.preparationError='Historical missing-record comparison';staged.needsRecovery=true;store.setItem(key,JSON.stringify(staged));
+  }finally{ui.restore();}
+  ui=await load(store,run);
+  try{
+   ui.get('approve').checked=true;await ui.get('save').onclick();const saved=readTransferRecord(store,key);
+   assert.equal(saved.receipt.status,verified?'saved-and-verified':'save-not-confirmed');
+   if(verified){assert.equal(saved.needsRecovery,false);assert.equal(saved.preparationError,undefined);assert.equal(saved.resolvedPreparationErrors[0].message,'Historical missing-record comparison');assert.equal(saved.resolvedPreparationErrors[0].resolvedByRequestDigest,saved.receipt.requestDigest);}
+   else {assert.equal(saved.needsRecovery,true);assert.equal(saved.preparationError,'Historical missing-record comparison');}
+   // Older successful reports also normalize on reload without dispatching again.
+   saved.needsRecovery=true;saved.preparationError='Older retained label';store.setItem(key,JSON.stringify(saved));
+  }finally{ui.restore();}
+  ui=await load(store,run);
+  try{await ui.get('check').onclick();const checked=readTransferRecord(store,key);assert.equal(checked.demo.sendCount,1);assert.equal(checked.needsRecovery,!verified);assert.equal(checked.preparationError,verified?undefined:'Older retained label');if(verified){assert.equal(checked.resolvedPreparationErrors.length,2);checked.cleanupReceipt={attempted:true,status:'save-not-confirmed'};checked.needsRecovery=true;store.setItem(key,JSON.stringify(checked));}}finally{ui.restore();}
+  if(verified){ui=await load(store,run);try{await ui.get('prepare-shared').onclick();assert.equal(readTransferRecord(store,key).needsRecovery,true,'A historical successful transfer must not clear later cleanup recovery');}finally{ui.restore();}}
+ }
+});

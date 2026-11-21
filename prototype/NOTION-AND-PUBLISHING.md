@@ -1,3 +1,9 @@
+# Shared-record live test passed — source 0.15.3
+
+Companion **0.15.2** passed the user-operated live test on lesson **8898985**: both approved test records were verified, the two associations rehearsed and restored, and a separately approved native save independently verified with zero mismatches and no resend. Removing only those two associations from the saved readback reproduces the entire original lesson exactly. Protected lesson 8898984 was untouched.
+
+Source **0.15.3** corrects stale preparation/recovery labels after a verified save while retaining historical evidence. Older successful reports normalize when opened; unconfirmed runs retain their recovery state. No immediate companion reload or repeat save is required. The broader unsupported publishing scope remains unchanged. See [live acceptance and limits](../NEXT-SESSION-HANDOFF.md).
+
 # Live reader repair — 0.15.2
 
 **298 tests pass.** The first shared-record live check safely stopped before creation because the reader expected `data-unit-for-lesson`; the deployed editor uses `data-unitforlesson`. Both serialized scope readers and their previously over-permissive fixtures are corrected. Reload the existing companion to 0.15.2 before retrying the same approved test package. No shared records or lesson save occurred in the failed attempt. Installed/live acceptance of the repaired path remains pending; the association save still requires its separate review. See [the handoff](../NEXT-SESSION-HANDOFF.md).

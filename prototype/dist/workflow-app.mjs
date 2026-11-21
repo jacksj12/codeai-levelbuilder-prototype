@@ -21,6 +21,15 @@ function persistRecord(recordKey,value){
  try{writeTransferRecord(localStorage,recordKey,value);}catch(error){evidenceError=error.message;throw error;}
 }
 const persist=()=>persistRecord(key,state);
+function settleVerifiedSaveState(){
+ if(state.cleanupReceipt?.attempted||state.receipt?.status!=='saved-and-verified')return;
+ state.needsRecovery=false;
+ if(state.preparationError){
+  state.resolvedPreparationErrors??=[];
+  state.resolvedPreparationErrors.push({message:state.preparationError,resolvedByRequestDigest:state.receipt.requestDigest});
+  delete state.preparationError;
+ }
+}
 const status=message=>{$('status').textContent=message;if(baselineReading)$('baseline-status').textContent=message;};
 const el=(tag,text,parent)=>{const n=document.createElement(tag);n.textContent=text;parent.append(n);return n;};
 function progress(step){for(let i=1;i<=4;i++){const node=$('step-'+i);node.classList.toggle('active',i===step);if(i===step)node.setAttribute('aria-current','step');else node.removeAttribute('aria-current');}}
@@ -178,7 +187,7 @@ async function makeIO(){
  }else adapter=demoAdapter(state.demo,persist);
  const prefix=native?'native-approved-save-':key+'-receipt-';
  return {...adapter,onProgress:status,loadReceipt:async digest=>readTransferRecord(localStorage,prefix+digest),
-  persist:async(digest,receipt)=>{if(receipt.kind==='test-link-cleanup-receipt')state.cleanupReceipt=receipt;else state.receipt=receipt;persistRecord(prefix+digest,receipt);persist();},
+  persist:async(digest,receipt)=>{if(receipt.kind==='test-link-cleanup-receipt')state.cleanupReceipt=receipt;else state.receipt=receipt;settleVerifiedSaveState();persistRecord(prefix+digest,receipt);persist();},
   checkpoint:async point=>{state.checkpoint=point;state.needsRecovery=point.stage?.restored===false;persist();$('download').disabled=false;},loadCheckpoint:async()=>state.checkpoint};
 }
 async function run(action,{baseline=false}={}){
@@ -289,7 +298,7 @@ if(!startupError&&native){try{
  state.storageCompaction={charactersReclaimed:compactLegacyEvidence(localStorage),recordsDeleted:0};
  if(state.job&&!state.receipt){const retained=readTransferRecord(localStorage,'native-approved-save-'+await saveRequestDigest(state.job.review));if(retained?.attempted){state.receipt=retained;state.recoveredDurableAttempt=true;}}
  }catch(error){startupError=error.message;}}
-try{if(!startupError){render();if(state.cleanupReceipt?.attempted)status('Cleanup run restored. Recheck cleanup to read the current saved result without resending.');else if(state.receipt)status('Retained run restored. You can check the saved result without sending again.');}}catch{startupError='Saved transfer data is incomplete or incompatible. The original data has been retained. Transfer is paused; preserve this run before recovery.';}
+try{if(!startupError){settleVerifiedSaveState();render();if(state.cleanupReceipt?.attempted)status('Cleanup run restored. Recheck cleanup to read the current saved result without resending.');else if(state.receipt)status('Retained run restored. You can check the saved result without sending again.');}}catch{startupError='Saved transfer data is incomplete or incompatible. The original data has been retained. Transfer is paused; preserve this run before recovery.';}
 if(startupError){status(startupError);$('status').setAttribute('role','alert');for(const control of document.querySelectorAll('button,input'))control.disabled=true;}
 if(native){if(startupError)$('baseline-status').textContent=startupError;else if(!state.job&&!state.receipt&&!state.needsRecovery)$('baseline-status').textContent='Companion '+chrome.runtime.getManifest().version+' · '+(state.preparationError||'Confirm the practice lesson, then read its baseline. No package is needed.');}
 

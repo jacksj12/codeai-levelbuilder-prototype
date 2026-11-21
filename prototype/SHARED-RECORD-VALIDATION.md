@@ -1,3 +1,9 @@
+# Live acceptance update — November 21, 2026
+
+The user-operated **0.15.2** companion path passed on lesson **8898985**: shared records 13894640 / 3106086, exact two-association rehearsal and restoration, separately approved native save, independent readback with zero mismatches and automatic no-resend recheck. Removing only those associations recreates the entire original saved baseline exactly. The test associations remain saved; protected lesson 8898984 remains untouched. This supersedes the pending-live status below for this specific path.
+
+Source 0.15.3 additionally fixes stale error/recovery labels after successful saves, with retained historical errors and regression coverage. No repeat live test is necessary for the already verified 0.15.2 result. See the current handoff for scope and evidence boundaries.
+
 # Shared-record validation — source 0.15.1
 
 The new shared-record create/reuse and lesson-association workflow has completed its deferred local checks. Live installed-companion acceptance remains pending; the full historical publishing roadmap is not complete.
