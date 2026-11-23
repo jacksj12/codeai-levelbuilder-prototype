@@ -30,7 +30,7 @@ export function resourceList(resources){
 }
 export function renderLesson(p,fields,fieldText){
  const esc=escapeHtml;
- const card=(id,title,body)=>`<article class="card lesson-preview" tabindex="-1" data-preview-id="${esc(id)}"><div class="card-head"><h3>${esc(title)}</h3><div class="actions"><button data-flag-target="${esc(id)}">Flag an issue</button></div></div><div class="pane">${body}</div></article>`;
+ const card=(id,title,body)=>`<article class="card lesson-preview" tabindex="-1" data-preview-id="${esc(id)}"><div class="card-head"><h3>${esc(title)}</h3><div class="actions"><button data-flag-target="${esc(id)}" aria-label="Flag an issue: ${esc(title)}">Flag an issue</button></div></div><div class="pane">${body}</div></article>`;
  const text=value=>`<div class="preview">${previewText(value,p.resources)||'<em>No content supplied.</em>'}</div>`;
  return '<p>Assembled from your current draft. Markdown support is limited and icons are markers; this approximates Level Builder. Flag issues as you read, then approve the complete lesson.</p>'
   +card('title','Lesson title',text(p.title))

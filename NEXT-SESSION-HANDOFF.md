@@ -1,3 +1,39 @@
+# Larger interface text and action icons — source 0.15.5
+
+The user requested larger fonts/icons and confirmation that editing safeguards remain effective. This is a visual-only follow-up to the local 0.15.4 modernization. No destination, approval, staging, save, no-resend, ownership, unsupported-operation or expiry guard was removed or weakened.
+
+Measured defaults changed from 16px reading / 14px buttons to **19px reading, 18px body, 17px controls and labels, 16px supporting text**. Sizing uses rem tokens; the stylesheet no longer fixes the root font size, so browser preferences remain effective. Main app pages opt into supported operating-system text scaling via meta text-scale; other browsers retain their normal zoom behavior. Established font family and layout identity remain. The font detector's existing Inter-family warning was retained, not suppressed; font replacement was outside this size adjustment.
+
+Add and close actions use authored, decorative 24px SVG icons alongside existing accessible names/text. Checkbox/radio controls are 20px, with flexible minimum control heights. Native and read-only companion popup styles also have larger inherited text. Source icon markers in lesson previews remain markers; no destination curriculum text or source HTML was rewritten.
+
+Browser checks in an isolated local workspace confirmed the computed sizes, no horizontal overflow at 1280px or 320px, and a 320px modal whose content width equaled its client width (271px). Long dialog content remains scrollable. Viewport override reset. No console errors were reported. Private screenshot remains outside Git. No live extension control, source mutation or lesson save occurred; accepted live test remains 0.15.2.
+
+Editing is not globally disabled. Local draft editing remains available. Supported Level Builder changes still require a fresh restored review, confirmed practice destination and exact approval. An attempted/completed save run becomes readback-only to prevent resend; another change uses a fresh run. Unsupported destructive/shared-record edits remain blocked. Agent control of extension URLs remains a separate browser-policy limit and must not be bypassed.
+
+Source 0.15.5 remains unarmed (verification-release-28), with no new permissions/dependencies. Current interface work is local and not committed/pushed; the prior installed guidance files remain untracked. Full regression verification is recorded with this delivery.
+
+Earlier entries below retain modernization details and live acceptance evidence.
+
+# Local web interface modernization — source 0.15.4
+
+Modern Web Guidance was explicitly requested for the active project. The legacy scan found **zero matches** before and after changes across **52 rules / 38 guides**, approximately **20%** of its guidance catalog; this is not a claim of a comprehensive audit. Manual review used the retrieved dialog, accessibility, HTML and CSS-layout guides to address concrete gaps the scanner did not cover.
+
+## Changes and verification
+
+- All seven workspace dialogs and the comparison-reset dialog reference their visible headings. Static entry controls use native autofocus; dynamic additions retain contextual focus. Destructive reset confirmations focus the safe action. Existing showModal/form-method-dialog behavior, Escape dismissal, inert background and browser focus containment remain native; no custom focus trap, invoker polyfill, runtime library or body scroll lock was added.
+- Replaced the local transfer comparison's blocking JavaScript confirm with a named native dialog. Keep current comparison and Escape preserve its package/recovery state; only its explicit confirmation clears the local comparison. The running-state guard remains. This is separate from native lesson saves and never writes remotely.
+- Added a keyboard skip link, current-view navigation semantics and descriptive view/lesson document titles. Changing views focuses the new heading. A browser-reproduced bug sent focus to the body after saving an issue; that path now focuses the replacement preview action after rebuilding the original invoker.
+- Preview flag actions include their content heading in the accessible name. Reviewed-level tables have a caption and scoped column headers.
+- Dialog and backdrop overscroll containment is progressive CSS enhancement. Fixed a browser-reproduced 574-pixel page width at a 390-pixel viewport by allowing backup controls to wrap and shrink; after the fix, document width was 375 pixels, with the import dialog's scroll width equal to its client width (349 pixels). Content was not clipped or hidden to mask the overflow.
+- Browser checks used a separate loopback preview on port 43838 and isolated/synthetic local workspaces: import/export/reset/flag/activity/section/dynamic-callout names and focus, Escape/focus return, skip link, view title/current state, issue-save focus, comparison cancellation and explicit reset, mobile import, and level-table semantics. No error logs on the checked workspace/comparison/demo pages. Viewport overrides were reset or their temporary tab closed. The private screenshot stays in the ChatGPT evidence folder.
+- **299 existing regression tests passed, zero failures**. Syntax and whitespace checks passed. No test was added merely to mirror markup; the changed native interactions were exercised in the browser.
+
+The companion source is 0.15.4 with unarmed verification-release-27 and unchanged permissions. Installed live acceptance remains **0.15.2** from the successful shared-record/association test below. No live lesson/source, shared record, account, OAuth session or saved transfer evidence was changed for this modernization. The existing OAuth server on 4316 was not restarted. The full unsupported publishing roadmap remains unchanged.
+
+Changes are local pending review/commit; the installed Modern Web Guidance files and skills-lock.json were already untracked from the user's installation and have been preserved. Do not silently include the guidance corpus or private QA files in a later commit.
+
+Earlier entries below retain live acceptance and historical evidence.
+
 # Shared-record live acceptance passed — November 21, 2026
 
 Companion **0.15.2** completed the user-operated live test on disposable lesson **8898985**, course version **1198**. The user separately authorized creating the exact two named test records, reviewed the association additions after rehearsal, and clicked the separate lesson save control. Agent access to extension pages remained blocked; the user performed the companion actions. No direct writer or policy workaround was used.

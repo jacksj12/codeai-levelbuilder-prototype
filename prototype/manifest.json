@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lesson Studio native companion",
-  "version": "0.15.3",
+  "version": "0.15.5",
   "description": "Review and stage supported playground changes, run unsaved checks, and verify separately approved saves. No additional host permissions.",
   "permissions": [
     "activeTab",

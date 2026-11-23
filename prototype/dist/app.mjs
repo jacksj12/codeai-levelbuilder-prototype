@@ -30,11 +30,12 @@ const changed=key=>{state.reviewed=state.reviewed.filter(x=>x!==key);state.appro
 function reviewControl(id){return `<label class="review-toggle"><input type="checkbox" data-review="${esc(id)}" ${state.reviewed.includes(id)?'checked':''}> Reviewed</label>`;}
 function preview(text){return previewText(text,state.draft.resources);}
 
+const titles={preview:['Lesson preview','Read the assembled lesson, flag issues, and approve once.'],front:['Front matter','Keep the teacher and student experience distinct.'],guide:['Teaching Guide','Review source notes, transformations, and lesson-only guidance.'],resources:['Resources','Check each destination, type, and intended audience.'],revisions:['Revision review','Keep approved work. Resolve new changes deliberately.']};
 function updateSummary(){
  // Editing invalidates review in state; keep visible checkboxes in sync too.
  document.querySelectorAll('[data-review]').forEach(el=>{el.checked=state.reviewed.includes(el.dataset.review);});
  const p=state.draft,done=requiredIds().filter(id=>state.reviewed.includes(id)).length,total=requiredIds().length;
- $('#title').textContent=p.title;$('#subtitle').textContent=`${p.course||'Lesson workspace'} · ${p.duration} minutes · source snapshot`;
+ document.title=titles[view][0]+' · '+p.title+' · Lesson Studio';$('#title').textContent=p.title;$('#subtitle').textContent=`${p.course||'Lesson workspace'} · ${p.duration} minutes · source snapshot`;
  $('#metrics').innerHTML=`<div class="metric"><strong>${p.sections.length}</strong><span>Teaching sections</span></div><div class="metric"><strong>${p.resources.length}</strong><span>Linked resources</span></div><div class="metric"><strong>${p.sections.reduce((n,s)=>n+s.callouts.length,0)}</strong><span>Teaching callouts</span></div><div class="metric"><strong>${approvalBlockers(state).length}</strong><span>Issues to resolve before approval</span></div>`;
  $('#review-state').textContent=state.approved?'Approved locally':state.conflicts.length?`${state.conflicts.length} conflicts to resolve`:'Draft · review needed';$('#review-state').className='pill'+(state.approved?' approved':'');
  const blockers=approvalBlockers(state);
@@ -45,11 +46,10 @@ function updateSummary(){
  const itemLabel=id=>{const section=p.sections.find(s=>s.id===id);return id==='title'?'Lesson title':id==='resources'?'Resources':fields.find(([k])=>k===id)?.[1]||(section?(section.origin==='local'?'Local section — ':'Slide '+section.slide+' — ')+(section.title||'Teaching section'):p.activities.find(a=>'activity:'+a.id===id)?.title||'Removed item');};
  panel.innerHTML='<h3>'+(blockers.length?blockers.length+(blockers.length===1?' approval blocker':' approval blockers'):state.approved?'Approved locally':'Ready for overall review')+'</h3><p>Individual review checkboxes are optional. Approval confirms you reviewed the complete lesson; it does not save remotely.</p>'+blockers.map(b=>'<div class="blocker"><span><strong>'+esc(b.note)+'</strong> — '+esc(b.target==='revisions'?'Revision review':itemLabel(b.target))+'</span><div class="actions"><button '+(b.target==='revisions'?'data-view="revisions"':'data-edit-target="'+esc(b.target)+'"')+'>Open location</button>'+(b.flagId?' <button data-resolve-flag="'+esc(b.flagId)+'">Mark resolved</button>':'')+'</div></div>').join('')+(state.flags.some(f=>f.resolved)?'<details><summary>Resolved issue history</summary>'+state.flags.filter(f=>f.resolved).map(f=>'<p>'+esc(f.note)+' — '+esc(itemLabel(f.target))+' <button data-edit-target="'+esc(f.target)+'">Open location</button><button data-reopen-flag="'+esc(f.id)+'">Reopen</button></p>').join('')+'</details>':'');
  $('#warnings').innerHTML=(state.source.deckUrl===fixture.deckUrl?'<div class="warning"><strong>Known source correction.</strong> The official lesson’s Slides resource points to the answer key. This draft uses the confirmed presentation link. Official materials are unchanged.</div>':'')+p.warnings.map(w=>`<div class="warning">${esc(w)}</div>`).join('');
- $('#nav').innerHTML=[['preview','Lesson preview',p.sections.length],['front','Front matter',7],['guide','Teaching Guide',p.sections.length],['resources','Resources',p.resources.length],['revisions','Revision review',state.conflicts.length]].map(([id,label,count])=>`<button data-view="${id}" class="${view===id?'active':''}">${label}<span>${count}</span></button>`).join('');
+ $('#nav').innerHTML=[['preview','Lesson preview',p.sections.length],['front','Front matter',7],['guide','Teaching Guide',p.sections.length],['resources','Resources',p.resources.length],['revisions','Revision review',state.conflicts.length]].map(([id,label,count])=>`<button data-view="${id}" class="${view===id?'active':''}"${view===id?' aria-current="page"':''}>${label}<span>${count}</span></button>`).join('');
 }
 function render(){
  updateSummary();const p=state.draft;
- const titles={preview:['Lesson preview','Read the assembled lesson, flag issues, and approve once.'],front:['Front matter','Keep the teacher and student experience distinct.'],guide:['Teaching Guide','Review source notes, transformations, and lesson-only guidance.'],resources:['Resources','Check each destination, type, and intended audience.'],revisions:['Revision review','Keep approved work. Resolve new changes deliberately.']};
  $('#view-title').textContent=titles[view][0];$('#view-description').textContent=titles[view][1];
  if(view==='preview'){
  $('#content').innerHTML=renderLesson(p,fields,fieldText);
@@ -84,7 +84,7 @@ function openEditor(id){
 async function copy(text){try{await navigator.clipboard.writeText(text);notice('Copied to clipboard.');}catch{notice('Clipboard access unavailable. Select the text and copy it manually.');}}
 document.addEventListener('click',async e=>{
  const b=e.target.closest('button');if(!b)return;
- if(b.dataset.view){const returnTo=b.dataset.view==='preview'?editTarget:null;view=b.dataset.view;editTarget=null;render();if(returnTo){const card=Array.from(document.querySelectorAll('[data-preview-id]')).find(el=>el.dataset.previewId===returnTo);card?.scrollIntoView({block:'start'});card?.focus({preventScroll:true});}}
+ if(b.dataset.view){const returnTo=b.dataset.view==='preview'?editTarget:null;view=b.dataset.view;editTarget=null;render();if(returnTo){const card=Array.from(document.querySelectorAll('[data-preview-id]')).find(el=>el.dataset.previewId===returnTo);card?.scrollIntoView({block:'start'});card?.focus({preventScroll:true});}else $('#view-title').focus();}
  if(b.dataset.addCallout||b.dataset.addSection){
   const sectionMode=Boolean(b.dataset.addSection);
   $('#addition-kind').value=sectionMode?'section':b.dataset.calloutType;
@@ -95,10 +95,10 @@ document.addEventListener('click',async e=>{
   $('#addition-title').value='';$('#addition-minutes').value='';$('#addition-body').value='';$('#addition-error').textContent='';
   $('#addition-dialog').showModal();(sectionMode?$('#addition-title'):$('#addition-body')).focus();
  }
- if(b.id==='add-activity'){$('#activity-title').value='';$('#activity-minutes').value='0';$('#activity-error').textContent='';$('#activity-dialog').showModal();$('#activity-title').focus();}
+ if(b.id==='add-activity'){$('#activity-title').value='';$('#activity-minutes').value='0';$('#activity-error').textContent='';$('#activity-dialog').showModal();}
  if(b.dataset.moveKind){try{if(moveRecord(state.draft,b.dataset.moveKind,b.dataset.moveId,Number(b.dataset.direction))){state.reviewed=[];changed(b.dataset.moveId);render();notice('Lesson order updated locally.');}}catch(error){notice(error.message);}}
  if(b.dataset.editTarget)openEditor(b.dataset.editTarget);
- if(b.dataset.flagTarget){$('#flag-target').value=b.dataset.flagTarget;$('#flag-note').value='';$('#flag-error').textContent='';$('#flag-dialog').showModal();$('#flag-note').focus();}
+ if(b.dataset.flagTarget){$('#flag-target').value=b.dataset.flagTarget;$('#flag-note').value='';$('#flag-error').textContent='';$('#flag-dialog').showModal();}
  if(b.dataset.resolveFlag){state.flags.find(f=>f.id===b.dataset.resolveFlag).resolved=true;persist();render();notice('Issue marked resolved. Review the lesson before approving.');}
  if(b.dataset.reopenFlag){state.flags.find(f=>f.id===b.dataset.reopenFlag).resolved=false;state.approved=false;persist();render();}
  if(b.id==='toggle-source'){const show=$('#content').classList.toggle('show-source');b.setAttribute('aria-pressed',String(show));b.textContent=show?'Hide source comparison':'Show source comparison';}
@@ -137,7 +137,10 @@ $('#save-addition').onclick=()=>{try{
  const id=kind==='section'?addSection(state.draft,{id:'local-section-'+crypto.randomUUID(),activityId:target,afterId:$('#addition-after').value,title:$('#addition-title').value,body:$('#addition-body').value,duration:$('#addition-minutes').value.trim()===''?null:Number($('#addition-minutes').value)}):addCallout(state.draft,target,kind,$('#addition-body').value);
  changed(id);$('#addition-dialog').close();openEditor(id);notice(kind==='section'?'Section added locally. Review it in the lesson preview.':'Callout added locally. Review it in the lesson preview.');
  }catch(err){$('#addition-error').textContent=err.message;}};
-$('#save-flag').onclick=()=>{try{addFlag(state,$('#flag-target').value,$('#flag-note').value,crypto.randomUUID());persist();render();$('#flag-dialog').close();notice('Issue saved. Use Open location to edit that item.');}catch(err){$('#flag-error').textContent=err.message;}};
+$('#save-flag').onclick=()=>{try{const target=$('#flag-target').value;addFlag(state,target,$('#flag-note').value,crypto.randomUUID());persist();render();$('#flag-dialog').close();
+ // Saving rebuilds the preview and removes the original invoker. Focus its replacement.
+ Array.from(document.querySelectorAll('[data-flag-target]')).find(button=>button.dataset.flagTarget===target)?.focus();
+ notice('Issue saved. Use Open location to edit that item.');}catch(err){$('#flag-error').textContent=err.message;}};
 $('#approve').onclick=()=>{try{approveDraft(state);persist();render();notice('Approved baseline saved locally. No Level Builder changes were made.');}catch(err){notice(err.message);}};
 $('#export').onclick=()=>{$('#export-status').textContent=state.approved?'This draft is approved locally.':'This export is an unapproved draft. '+approvalBlockers(state).length+' approval blockers. Pending resource edits are included as notes in JSON, not applied lesson content.';$('#export-dialog').showModal();};
 $('#md-export').onclick=()=>download('lesson-review.md',exportMarkdown(state.draft),'text/markdown');

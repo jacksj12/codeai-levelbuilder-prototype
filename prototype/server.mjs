@@ -6,6 +6,8 @@ import {createNotionService} from './notion-service.mjs';
 import {notionRoutes} from './notion-http.mjs';
 const root=fileURLToPath(new URL('./dist/',import.meta.url));
 const types={'.html':'text/html','.mjs':'text/javascript','.css':'text/css','.json':'application/json'};
+// Lesson previews show external images and inline text colors; scripts and requests stay same-origin.
+const csp="default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 export function createPreviewServer({clientId=process.env.NOTION_CLIENT_ID,clientSecret=process.env.NOTION_CLIENT_SECRET,fetchImpl=fetch}={}){
  const routers=new Map();
  const server=http.createServer(async(req,res)=>{
@@ -22,7 +24,7 @@ export function createPreviewServer({clientId=process.env.NOTION_CLIENT_ID,clien
    if(req.method!=='GET'){res.writeHead(405);return res.end('Use the application controls');}
    const pathname=decodeURIComponent(url.pathname),target=path.resolve(root,'.'+(pathname==='/'?'/index.html':pathname));
    const relative=path.relative(root,target);if(relative.startsWith('..')||path.isAbsolute(relative)){res.writeHead(403);return res.end();}
-   const data=await readFile(target);res.writeHead(200,{'Content-Type':types[path.extname(target)]||'application/octet-stream','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'});res.end(data);
+   const data=await readFile(target);res.writeHead(200,{'Content-Type':types[path.extname(target)]||'application/octet-stream','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':csp});res.end(data);
   }catch{if(!res.headersSent)res.writeHead(404);res.end('Not found');}
  });return server;
 }

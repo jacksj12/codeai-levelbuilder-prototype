@@ -19,7 +19,7 @@ Run the engineering checks from `prototype`:
 node --test --test-isolation=none
 ```
 
-Latest checkpoint: **0.15.3, 299 tests passed**. The user-operated 0.15.2 live test on lesson 8898985 verified shared-record creation, exact association rehearsal/restoration, and a separately approved native save with existing content preserved and no resend. Source 0.15.3 corrects stale status labels. See [shared-record validation](prototype/SHARED-RECORD-VALIDATION.md) and [the handoff](NEXT-SESSION-HANDOFF.md) for evidence and remaining scope. The full publishing roadmap remains unfinished; engineering checks are not independent curriculum acceptance.
+Latest local source: **0.15.5**. Reading text, controls and icons are larger; all editing/save safeguards remain. Dialog accessibility, keyboard navigation, review-table semantics and narrow-screen backup controls are modernized; browser checks passed. The user-operated 0.15.2 live test on lesson 8898985 verified shared-record creation, exact association rehearsal/restoration, and a separately approved native save with existing content preserved and no resend. Source 0.15.3 corrects stale status labels. See [shared-record validation](prototype/SHARED-RECORD-VALIDATION.md) and [the handoff](NEXT-SESSION-HANDOFF.md) for evidence and remaining scope. The full publishing roadmap remains unfinished; engineering checks are not independent curriculum acceptance.
 
 Release **0.12.0** adds combined source imports and a read-only signed-in Slides import control. File imports were checked against the real source deck and Notion brief. Installed-extension reload and live workflow acceptance remain blocked by browser access policy.
 

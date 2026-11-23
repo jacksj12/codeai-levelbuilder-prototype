@@ -2,14 +2,16 @@ import {CALLOUT_TYPES,addCallout} from './editing.mjs';
 import {SLIDE_MARKER,insertMarkdown,addLevel,addCodeDoc,addResource,addImage} from './insertions.mjs';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+const addIcon='<svg class="ui-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>';
+
 export function insertionToolbar(section){
- return `<details class="content-options"><summary>Add content</summary><div class="insertion-toolbar" role="group" aria-label="Add content to ${esc(section.title||'teaching section')}">${['Level','Callout','Code Doc','Resource','Slide','Image'].map(kind=>`<button data-insert-kind="${kind}" data-insert-section="${esc(section.id)}"><span aria-hidden="true">⊕</span> ${kind}</button>`).join('')}</div><div class="section-insert"><button data-add-section="${esc(section.activityId)}" data-after-section="${esc(section.id)}">⊕ Activity Section</button></div></details>`;
+ return `<details class="content-options"><summary>Add content</summary><div class="insertion-toolbar" role="group" aria-label="Add content to ${esc(section.title||'teaching section')}">${['Level','Callout','Code Doc','Resource','Slide','Image'].map(kind=>`<button data-insert-kind="${kind}" data-insert-section="${esc(section.id)}">${addIcon} ${kind}</button>`).join('')}</div><div class="section-insert"><button data-add-section="${esc(section.activityId)}" data-after-section="${esc(section.id)}">${addIcon} Activity Section</button></div></details>`;
 }
 
 export function installContentAuthoring({getDraft,canAddResource=()=>true,changed,openEditor,notice}){
  const $=selector=>document.querySelector(selector),selections=new Map();
  let pending=null;
- document.body.insertAdjacentHTML('beforeend',`<dialog id="content-dialog"><form method="dialog"><div class="dialog-head"><h2 id="content-heading">Add content</h2><button aria-label="Cancel content addition">×</button></div></form><div id="content-fields"></div><p id="content-error" role="alert"></p><button id="save-content" class="primary">Add to lesson draft</button></dialog>`);
+ document.body.insertAdjacentHTML('beforeend',`<dialog id="content-dialog" aria-labelledby="content-heading"><form method="dialog"><div class="dialog-head"><h2 id="content-heading">Add content</h2><button aria-label="Cancel content addition"><svg class="ui-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div></form><div id="content-fields"></div><p id="content-error" role="alert"></p><button id="save-content" class="primary">Add to lesson draft</button></dialog>`);
  const remember=event=>{
   const el=event.target;
   if(el.matches?.('textarea[data-section][data-prop="body"]'))selections.set(el.dataset.section,{body:el.value,start:el.selectionStart,end:el.selectionEnd});
@@ -42,7 +44,7 @@ export function installContentAuthoring({getDraft,canAddResource=()=>true,change
    const toggle=()=>{$('#new-resource-fields').hidden=$('#insert-resource').value!=='__new__';};
    $('#insert-resource').onchange=toggle;toggle();
   }
-  $('#content-dialog').showModal();$('#content-fields input:not([type="checkbox"]), #content-fields select, #content-fields textarea')?.focus();
+  $('#content-fields input:not([type="checkbox"]), #content-fields select, #content-fields textarea')?.setAttribute('autofocus','');$('#content-dialog').showModal();
  });
  $('#save-content').onclick=async()=>{
   if(!pending)return;

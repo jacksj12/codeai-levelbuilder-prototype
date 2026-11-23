@@ -1,3 +1,15 @@
+# Readability update — 0.15.5
+
+The local interface uses larger reading text (19px default), general text (18px), buttons/labels (17px), and 24px action icons. Relative sizing respects browser font preferences; supporting browsers also honor operating-system text scaling. Desktop and 320px layouts were inspected without horizontal overflow.
+
+Editing safeguards remain: local drafts are editable, supported remote changes need a fresh exact review and approval, and completed save runs allow readback only. No live lesson changed for this visual update. Earlier notes below document the accepted live test and implementation limits.
+
+# Local interface modernization — 0.15.4
+
+Keyboard and screen-reader navigation now includes named native dialogs, safe initial focus, a skip link, current-view labels and page titles, contextual issue actions and labeled review tables. The local comparison reset uses a native confirmation dialog. Backup controls wrap on narrow screens. Browser checks passed, including native cancellation, issue-save focus and a 390-pixel layout; all **299 regression tests pass**. The legacy scanner found zero matches in its limited 52-rule catalog.
+
+These are local interface changes. The installed companion's accepted live shared-record test remains version 0.15.2; no new lesson save or cleanup was performed. See the current handoff for evidence and remaining build scope.
+
 # Shared-record live test passed — source 0.15.3
 
 Companion **0.15.2** passed the user-operated live test on lesson **8898985**: both approved test records were verified, the two associations rehearsed and restored, and a separately approved native save independently verified with zero mismatches and no resend. Removing only those two associations from the saved readback reproduces the entire original lesson exactly. Protected lesson 8898984 was untouched.

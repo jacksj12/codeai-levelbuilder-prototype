@@ -45,7 +45,10 @@ $('#load-package').onclick=async()=>{
 };
 $('#new-comparison').onclick=()=>{
  if(running)return;
- if(!confirm('Start a new transfer comparison? This clears only this transfer rehearsal and recovery record. Download its report first to keep a backup. The lesson workspace is unaffected.'))return;
+ $('#new-comparison-dialog').showModal();
+};
+$('#confirm-new-comparison').onclick=()=>{
+ if(running)return;
  state={decisions:{}};plan=null;driver=null;persist();location.reload();
 };
 $('#blank-rehearsal').onclick=async()=>{

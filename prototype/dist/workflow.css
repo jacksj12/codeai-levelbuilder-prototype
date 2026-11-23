@@ -8,3 +8,8 @@
 .flow #shared-review details { margin-block: 1rem; }
 .flow #shared-review summary { cursor: pointer; }
 .flow #shared-review summary:focus-visible { outline: 2px solid var(--nav); outline-offset: 4px; }
+
+.flow caption { text-align: start; font-weight: 600; margin-block-end: .5rem; }
+
+.flow th, .flow td, .flow .summary span { font-size: var(--type-meta); }
+.flow h1 { font-size: 2.25rem; }
